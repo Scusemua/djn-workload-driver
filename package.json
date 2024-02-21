@@ -1,0 +1,15 @@
+{
+    "name": "@scusemua/workload-driver",
+    "version": "0.0.1",
+    "description": "Workload Driver and management server for the distributed jupyter notebook platform.",
+    "main": "index.js",
+    "scripts": {},
+    "author": "Ben Carver",
+    "dependencies": {
+      "@patternfly/patternfly": "^4.217.1"
+    },
+    "devDependencies": {
+      "sass": "^1.55.0"
+    }
+  }
+  
