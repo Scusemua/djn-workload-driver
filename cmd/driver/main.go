@@ -1,14 +1,15 @@
-package driver
+package main
 
 import (
 	"log"
 	"net/http"
 
 	"github.com/maxence-charriere/go-app/v9/pkg/app"
+	"github.com/scusemua/djn-workload-driver/m/v2/src/driver"
 )
 
 func main() {
-	driver := NewWorkloadDriver()
+	driver := driver.NewWorkloadDriver()
 
 	app.Route("/", driver)
 

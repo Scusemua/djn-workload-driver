@@ -1,22 +1,26 @@
 package driver
 
 import (
-	"github.com/mason-leap-lab/go-utils/config"
-	"github.com/mason-leap-lab/go-utils/logger"
 	"github.com/maxence-charriere/go-app/v9/pkg/app"
+	"go.uber.org/zap"
 )
 
 type workloadDriverImpl struct {
 	app.Compo
 
-	gatewayAddress string        // gRPC address of the Gateway. Manually entered by the user.
-	log            logger.Logger // Logger.
+	gatewayAddress string      // gRPC address of the Gateway. Manually entered by the user.
+	logger         *zap.Logger // Logger.
 }
 
 func NewWorkloadDriver() *workloadDriverImpl {
 	driver := &workloadDriverImpl{}
 
-	config.InitLogger(&driver.log, driver)
+	logger, err := zap.NewDevelopment()
+	if err != nil {
+		panic(err)
+	}
+
+	driver.logger = logger
 
 	return driver
 }
