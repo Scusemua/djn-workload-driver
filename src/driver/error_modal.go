@@ -1,7 +1,7 @@
 package driver
 
 import (
-	"errors"
+	"strings"
 
 	"github.com/maxence-charriere/go-app/v9/pkg/app"
 )
@@ -22,63 +22,48 @@ type ErrorModal struct {
 	OnAction func() // Handler to call when triggering the modal's primary action
 }
 
-type ErrorModalStory struct {
-	app.Compo
-	modalOpen    bool
-	errorMessage string
-	alertBody    string
-	onClose      func()
-}
+func (c *ErrorModal) Render() app.UI {
+	return &Modal{
+		ID:    c.ID,
+		Icon:  c.Icon,
+		Title: c.Title,
+		Class: c.Class,
+		Body: []app.UI{
+			app.Div().
+				Body(
+					app.Text(c.Body),
+				),
+			app.Text("Error details:"),
+			app.Div().
+				Class("pf-c-code-editor pf-m-read-only pf-u-mt-lg").
+				Body(
+					app.Div().
+						Class("pf-c-code-editor__main").
+						Body(
+							app.Textarea().
+								Rows(len(strings.Split(c.Error.Error(), "\n"))).
+								Style("width", "100%").
+								Style("resize", "vertical").
+								Style("border", "0").
+								Class("pf-c-form-control").
+								ReadOnly(true).
+								Text(c.Error.Error()),
+						),
+				),
+		},
+		Footer: []app.UI{
+			app.Button().
+				Aria("disabled", "false").
+				Class("pf-c-button pf-m-primary").
+				Type("button").
+				Text(c.ActionLabel).
+				OnClick(func(ctx app.Context, e app.Event) {
+					c.OnAction()
+				}),
+		},
 
-func NewErrorModalStory(errorMessage string, err error, modalOpen bool, onClose func()) *ErrorModalStory {
-	if err == nil {
-		return &ErrorModalStory{
-			modalOpen:    modalOpen,
-			errorMessage: errorMessage,
-			alertBody:    "An unknown error has occurred.",
-			onClose:      onClose,
-		}
-	} else {
-		return &ErrorModalStory{
-			modalOpen:    modalOpen,
-			errorMessage: errorMessage,
-			alertBody:    err.Error(),
-			onClose:      onClose,
-		}
+		OnClose: func() {
+			c.OnClose()
+		},
 	}
-}
-
-func (c *ErrorModalStory) Render() app.UI {
-	return app.Div().Body(
-		app.Button().
-			Class("pf-c-button pf-m-primary").
-			Type("button").
-			Text("Open error modal").
-			OnClick(func(ctx app.Context, e app.Event) {
-				c.modalOpen = !c.modalOpen
-			}),
-		app.If(
-			c.modalOpen,
-			app.UI(
-				&ErrorModal{
-					ID:          "error-modal-story",
-					Icon:        "fas fa-times",
-					Title:       "Error",
-					Class:       "pf-m-danger",
-					Body:        c.alertBody,
-					Error:       errors.New(c.errorMessage),
-					ActionLabel: "Close",
-
-					OnClose: func() {
-						c.modalOpen = false
-						c.onClose()
-						c.Update()
-					},
-					OnAction: func() {
-						c.modalOpen = false
-						c.Update()
-					},
-				},
-			)),
-	)
 }

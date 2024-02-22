@@ -1,7 +1,9 @@
 package driver
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/maxence-charriere/go-app/v9/pkg/app"
@@ -44,14 +46,15 @@ func (d *workloadDriverImpl) dialGatewayGRPC() (cluster.DistributedNotebookClust
 
 	app.Logf("Attempting to dial Gateway gRPC server now. Address: %s\n", d.gatewayAddress)
 
-	conn, err := grpc.Dial(d.gatewayAddress, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithTimeout(time.Second*5))
+	ctx, cancel := context.WithTimeout(context.TODO(), time.Second*3)
+	defer cancel()
+	conn, err := grpc.DialContext(ctx, d.gatewayAddress, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 	if err != nil {
 		app.Logf("Failed to dial Gateway gRPC server. Address: %s. Error: %v.\n", d.gatewayAddress, zap.Error(err))
 		return nil, err
 	}
 
-	defer conn.Close()
-
+	app.Logf("Successfully dialed Cluster Gateway at address %s.\n", d.gatewayAddress)
 	client := cluster.NewDistributedNotebookClusterClient(conn)
 
 	return client, nil
@@ -76,6 +79,8 @@ func (d *workloadDriverImpl) connectButtonHandler() error {
 
 // The Render method is where the component appearance is defined.
 func (d *workloadDriverImpl) Render() app.UI {
+	// linkClass := "link heading fit unselectable"
+
 	return app.Div().
 		Class("pf-c-page").
 		Body(
@@ -103,7 +108,7 @@ func (d *workloadDriverImpl) Render() app.UI {
 												Text("No Kernels Loaded"),
 											app.Div().
 												Class("pf-c-empty-state__body").
-												Text("To get started, please enter the address and port of the Gateway and connect."),
+												Text("To start, please enter the IP address and port of the Cluster Gateway gRPC server and press Connect."),
 											app.Div().
 												Class("pf-c-form__group").
 												Body(
@@ -142,16 +147,32 @@ func (d *workloadDriverImpl) Render() app.UI {
 												Type("button").
 												Text("Connect").
 												OnClick(func(ctx app.Context, e app.Event) {
-													app.Logf("Connect clicked! Attempting to connect to Gateway at %s now...", d.gatewayAddress)
+													app.Logf("Connect clicked! Attempting to connect to Gateway (via gRPC) at %s now...", d.gatewayAddress)
 													d.err = d.connectButtonHandler()
 
 													if d.err != nil {
-														d.errMsg = "Failed to Connect to Cluster Gateway"
+														d.errMsg = fmt.Sprintf("Unable to connect to the Cluster Gateway at the specified address: \"%s\"", d.gatewayAddress)
 													}
 
 													d.Update()
 												}),
 										),
 								))),
-			app.If(d.err != nil, NewErrorModalStory(d.errMsg, d.err, true, d.recover)))
+			app.If(d.err != nil, &ErrorModal{
+				ID:          "error-modal",
+				Icon:        "fas fa-times",
+				Title:       "An Error has Occurred",
+				Class:       "pf-m-danger",
+				Body:        d.errMsg,
+				Error:       d.err,
+				ActionLabel: "Close",
+
+				OnClose: func() {
+					d.recover()
+				},
+				OnAction: func() {
+					d.recover()
+				},
+			}))
+	// app.If(d.err != nil, NewErrorModalStory(d.errMsg, d.err, true, d.recover)))
 }

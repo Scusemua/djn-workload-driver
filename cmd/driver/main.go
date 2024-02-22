@@ -37,9 +37,11 @@ func main() {
 		Description: "An Hello World! example",
 		Styles: []string{
 			"/web/main.css",
+			"/web/css/docs.css",
 		},
 	})
 
+	// TODO(Ben): Make this port configurable.
 	if err := http.ListenAndServe(":8000", nil); err != nil {
 		log.Fatal(err)
 	}
