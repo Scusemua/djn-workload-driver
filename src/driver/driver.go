@@ -1,28 +1,77 @@
 package driver
 
 import (
+	"errors"
+	"time"
+
 	"github.com/maxence-charriere/go-app/v9/pkg/app"
+	cluster "github.com/scusemua/djn-workload-driver/m/v2/src/cluster"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type workloadDriverImpl struct {
 	app.Compo
 
-	gatewayAddress string      // gRPC address of the Gateway. Manually entered by the user.
-	logger         *zap.Logger // Logger.
+	gatewayAddress string                                   // gRPC address of the Gateway. Manually entered by the user.
+	rpcClient      cluster.DistributedNotebookClusterClient // gRPC client to the Cluster Gateway.
+	errMsg         string
+	err            error // Current operational error.
 }
+
+var (
+	ErrEmptyGatewayAddr = errors.New("Gateway IP address cannot be the empty string")
+)
 
 func NewWorkloadDriver() *workloadDriverImpl {
 	driver := &workloadDriverImpl{}
 
-	logger, err := zap.NewDevelopment()
-	if err != nil {
-		panic(err)
-	}
+	// logger, err := zap.NewDevelopment()
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	driver.logger = logger
+	// driver.logger = logger
 
 	return driver
+}
+
+func (d *workloadDriverImpl) dialGatewayGRPC() (cluster.DistributedNotebookClusterClient, error) {
+	if d.gatewayAddress == "" {
+		return nil, ErrEmptyGatewayAddr
+	}
+
+	app.Logf("Attempting to dial Gateway gRPC server now. Address: %s\n", d.gatewayAddress)
+
+	conn, err := grpc.Dial(d.gatewayAddress, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithTimeout(time.Second*5))
+	if err != nil {
+		app.Logf("Failed to dial Gateway gRPC server. Address: %s. Error: %v.\n", d.gatewayAddress, zap.Error(err))
+		return nil, err
+	}
+
+	defer conn.Close()
+
+	client := cluster.NewDistributedNotebookClusterClient(conn)
+
+	return client, nil
+}
+
+func (d *workloadDriverImpl) recover() {
+	d.err = nil
+	d.errMsg = ""
+	d.Update()
+}
+
+func (d *workloadDriverImpl) connectButtonHandler() error {
+	client, err := d.dialGatewayGRPC()
+	if err != nil {
+		app.Log("Failed to connect via gRPC.")
+		return err
+	}
+
+	d.rpcClient = client
+	return err
 }
 
 // The Render method is where the component appearance is defined.
@@ -94,7 +143,15 @@ func (d *workloadDriverImpl) Render() app.UI {
 												Text("Connect").
 												OnClick(func(ctx app.Context, e app.Event) {
 													app.Logf("Connect clicked! Attempting to connect to Gateway at %s now...", d.gatewayAddress)
+													d.err = d.connectButtonHandler()
+
+													if d.err != nil {
+														d.errMsg = "Failed to Connect to Cluster Gateway"
+													}
+
+													d.Update()
 												}),
 										),
-								))))
+								))),
+			app.If(d.err != nil, NewErrorModalStory(d.errMsg, d.err, true, d.recover)))
 }

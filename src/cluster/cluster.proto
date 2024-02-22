@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+option go_package = "github.com/zhangjyr/distributed-notebook/common/gateway";
+option java_multiple_files = true;
+option java_package = "com.github.zhangjyr.distributed-notebook.common.gateway";
+option java_outer_classname = "GatewayProto";
+
+package gateway;
+
+service DistributedNotebookCluster {
+  // Return a list of all of the current kernel IDs.
+  rpc ListKernels(Void) returns (ListKernelsResponse) {}
+}
+
+message JupyterKernel {
+  string kernelId = 1;
+  string persistentId = 2;
+  int32 numReplicas = 3;
+  string aggregateStatus = 4;
+}
+
+message ListKernelsResponse {
+  int32 numKernels = 1;
+  repeated JupyterKernel kernels = 2;
+}
+
+message Void{}
