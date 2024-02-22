@@ -1,0 +1,29 @@
+.link {
+    display: block;
+    cursor: pointer;
+    transition: 0.2s all;
+    color: currentColor;
+    text-transform: uppercase;
+}
+  
+.link:hover {
+    color: deepskyblue;
+    transform: scale(1.2);
+}
+
+.link:active {
+    color: deepskyblue;
+    transform: scale(0.98);
+}
+
+.link-update {
+    animation-timing-function: ease;
+    animation-duration: 2s;
+    animation-iteration-count: infinite;
+    animation-name: bounce;
+    transform-origin: bottom;
+}
+
+.link-update .link-icon {
+    margin-right: 3px;
+}
