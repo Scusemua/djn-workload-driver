@@ -2,32 +2,34 @@ package driver
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"time"
 
 	"github.com/maxence-charriere/go-app/v9/pkg/app"
-	cluster "github.com/scusemua/djn-workload-driver/m/v2/src/cluster"
+	cmap "github.com/orcaman/concurrent-map/v2"
+	"github.com/scusemua/djn-workload-driver/m/v2/src/domain"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
 type workloadDriverImpl struct {
-	app.Compo
+	rpcClient          DistributedNotebookClusterClient // gRPC client to the Cluster Gateway.
+	connectedToGateway bool                             // Flag indicating whether or not we're currently connected to the Cluster Gateway.
 
-	gatewayAddress string                                   // gRPC address of the Gateway. Manually entered by the user.
-	rpcClient      cluster.DistributedNotebookClusterClient // gRPC client to the Cluster Gateway.
-	errMsg         string
-	err            error // Current operational error.
+	kernels                *cmap.ConcurrentMap[string, *JupyterKernel] // Currently-active Jupyter kernels (that we know about).
+	errorHandler           domain.ErrorHandler                         // Pass errors here to be displayed to the user.
+	spoofGatewayConnection bool                                        // Used for development when not actually using a real cluster.
+
+	// logger *zap.Logger // Logger. Presently unused.
 }
 
-var (
-	ErrEmptyGatewayAddr = errors.New("Gateway IP address cannot be the empty string")
-)
-
-func NewWorkloadDriver() *workloadDriverImpl {
-	driver := &workloadDriverImpl{}
+func NewWorkloadDriver(errorHandler domain.ErrorHandler, spoofGatewayConnection bool) *workloadDriverImpl {
+	kernelMap := cmap.New[*JupyterKernel]()
+	driver := &workloadDriverImpl{
+		kernels:                &kernelMap,
+		errorHandler:           errorHandler,
+		spoofGatewayConnection: spoofGatewayConnection,
+	}
 
 	// logger, err := zap.NewDevelopment()
 	// if err != nil {
@@ -39,140 +41,70 @@ func NewWorkloadDriver() *workloadDriverImpl {
 	return driver
 }
 
-func (d *workloadDriverImpl) dialGatewayGRPC() (cluster.DistributedNotebookClusterClient, error) {
-	if d.gatewayAddress == "" {
-		return nil, ErrEmptyGatewayAddr
+func (d *workloadDriverImpl) Start() {
+	// Do nothing for now.
+}
+
+func (d *workloadDriverImpl) ConnectedToGateway() bool {
+	return d.connectedToGateway
+}
+
+func (d *workloadDriverImpl) DialGatewayGRPC(gatewayAddress string) error {
+	if d.spoofGatewayConnection {
+		app.Logf("Spoofing RPC connection to Cluster Gateway...")
+		time.Sleep(time.Second * 3)
+		d.connectedToGateway = true
+		return nil
 	}
 
-	app.Logf("Attempting to dial Gateway gRPC server now. Address: %s\n", d.gatewayAddress)
+	if gatewayAddress == "" {
+		return domain.ErrEmptyGatewayAddr
+	}
+
+	// d.logger.Info(fmt.Sprintf("Attempting to dial Gateway gRPC server now. Address: %s\n", d.gatewayAddress))
+	app.Logf("Attempting to dial Gateway gRPC server now. Address: %s\n", gatewayAddress)
 
 	ctx, cancel := context.WithTimeout(context.TODO(), time.Second*3)
 	defer cancel()
-	conn, err := grpc.DialContext(ctx, d.gatewayAddress, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
+	conn, err := grpc.DialContext(ctx, gatewayAddress, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 	if err != nil {
-		app.Logf("Failed to dial Gateway gRPC server. Address: %s. Error: %v.\n", d.gatewayAddress, zap.Error(err))
-		return nil, err
-	}
-
-	app.Logf("Successfully dialed Cluster Gateway at address %s.\n", d.gatewayAddress)
-	client := cluster.NewDistributedNotebookClusterClient(conn)
-
-	return client, nil
-}
-
-func (d *workloadDriverImpl) recover() {
-	d.err = nil
-	d.errMsg = ""
-	d.Update()
-}
-
-func (d *workloadDriverImpl) connectButtonHandler() error {
-	client, err := d.dialGatewayGRPC()
-	if err != nil {
-		app.Log("Failed to connect via gRPC.")
+		// d.logger.Error(fmt.Sprintf("Failed to dial Gateway gRPC server. Address: %s. Error: %v.\n", d.gatewayAddress, zap.Error(err)))
+		app.Logf("Failed to dial Gateway gRPC server. Address: %s. Error: %v.\n", gatewayAddress, zap.Error(err))
 		return err
 	}
 
-	d.rpcClient = client
-	return err
+	// d.logger.Info(fmt.Sprintf("Successfully dialed Cluster Gateway at address %s.\n", d.gatewayAddress))
+	app.Logf("Successfully dialed Cluster Gateway at address %s.\n", gatewayAddress)
+	d.rpcClient = NewDistributedNotebookClusterClient(conn)
+	d.connectedToGateway = true
+
+	return nil
 }
 
-// The Render method is where the component appearance is defined.
-func (d *workloadDriverImpl) Render() app.UI {
-	// linkClass := "link heading fit unselectable"
+func (d *workloadDriverImpl) NumKernels() int32 {
+	return int32(d.kernels.Count())
+}
 
-	return app.Div().
-		Class("pf-c-page").
-		Body(
-			app.Main().
-				Class("pf-c-page__main").
-				ID("driver-main").
-				TabIndex(-1).
-				Body(
-					app.Section().
-						Class("pf-c-page__main-section pf-m-fill").
-						Body(
-							app.Div().
-								Class("pf-c-empty-state").
-								Body(
-									app.Div().
-										Class("pf-c-empty-state__content").
-										Body(
-											app.I().
-												Class("fas fa-laptop-code pf-c-empty-state__icon").
-												Style("color", "#203250").
-												Style("font-size", "96px").
-												Aria("hidden", true),
-											app.H1().
-												Class("pf-c-title pf-m-lg").
-												Text("No Kernels Loaded"),
-											app.Div().
-												Class("pf-c-empty-state__body").
-												Text("To start, please enter the IP address and port of the Cluster Gateway gRPC server and press Connect."),
-											app.Div().
-												Class("pf-c-form__group").
-												Body(
-													app.Div().
-														Class("pf-c-form__group").
-														Body(
-															app.Label().
-																Class("pf-c-form__label").
-																For("gateway-address-input").
-																Body(
-																	app.Span().
-																		Class("pf-c-form__label-text").
-																		Text("Gateway Address"),
-																	app.Span().
-																		Class("pf-c-form__label-required").
-																		Aria("hidden", true).
-																		Text("*"),
-																),
-														),
-													app.Div().
-														Class("pf-c-form__group-control").
-														Body(
-															app.Input().
-																Class("pf-c-form-control").
-																Type("text").
-																Placeholder("0.0.0.0:9000").
-																ID("gateway-address-input").
-																Required(true).
-																OnInput(func(ctx app.Context, e app.Event) {
-																	d.gatewayAddress = ctx.JSSrc().Get("value").String()
-																}),
-														),
-												),
-											app.Button().
-												Class("pf-c-button pf-m-primary").
-												Type("button").
-												Text("Connect").
-												OnClick(func(ctx app.Context, e app.Event) {
-													app.Logf("Connect clicked! Attempting to connect to Gateway (via gRPC) at %s now...", d.gatewayAddress)
-													d.err = d.connectButtonHandler()
+func (d *workloadDriverImpl) Kernels() []domain.Kernel {
+	kernels := make([]domain.Kernel, 0, d.NumKernels())
 
-													if d.err != nil {
-														d.errMsg = fmt.Sprintf("Unable to connect to the Cluster Gateway at the specified address: \"%s\"", d.gatewayAddress)
-													}
+	for kvPair := range d.kernels.IterBuffered() {
+		kernels = append(kernels, kvPair.Val)
+	}
 
-													d.Update()
-												}),
-										),
-								))),
-			app.If(d.err != nil, &ErrorModal{
-				ID:          "error-modal",
-				Icon:        "fas fa-times",
-				Title:       "An Error has Occurred",
-				Class:       "pf-m-danger",
-				Body:        d.errMsg,
-				Error:       d.err,
-				ActionLabel: "Close",
+	return kernels
+}
 
-				OnClose: func() {
-					d.recover()
-				},
-				OnAction: func() {
-					d.recover()
-				},
-			}))
-	// app.If(d.err != nil, NewErrorModalStory(d.errMsg, d.err, true, d.recover)))
+func (d *workloadDriverImpl) fetchKernels() {
+	app.Log("Fetching kernels now.")
+	resp, err := d.rpcClient.ListKernels(context.TODO(), &Void{})
+	if err != nil {
+		d.errorHandler.HandleError(err, "Failed to fetch list of active kernels from the Cluster Gateway.")
+		return
+	}
+
+	for _, kernel := range resp.Kernels {
+		d.kernels.Set(kernel.KernelId, kernel)
+		app.Log("Discovered active kernel! ID=%s, NumReplicas=%d, Status1=%s, Status2=%s", kernel.KernelId, kernel.NumReplicas, kernel.Status, kernel.AggregateBusyStatus)
+	}
 }

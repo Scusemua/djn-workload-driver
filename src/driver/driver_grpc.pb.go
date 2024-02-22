@@ -2,9 +2,9 @@
 // versions:
 // - protoc-gen-go-grpc v1.3.0
 // - protoc             v3.15.8
-// source: src/cluster/cluster.proto
+// source: src/driver/driver.proto
 
-package gateway
+package driver
 
 import (
 	context "context"
@@ -19,7 +19,7 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	DistributedNotebookCluster_ListKernels_FullMethodName = "/gateway.DistributedNotebookCluster/ListKernels"
+	DistributedNotebookCluster_ListKernels_FullMethodName = "/driver.DistributedNotebookCluster/ListKernels"
 )
 
 // DistributedNotebookClusterClient is the client API for DistributedNotebookCluster service.
@@ -99,7 +99,7 @@ func _DistributedNotebookCluster_ListKernels_Handler(srv interface{}, ctx contex
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var DistributedNotebookCluster_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "gateway.DistributedNotebookCluster",
+	ServiceName: "driver.DistributedNotebookCluster",
 	HandlerType: (*DistributedNotebookClusterServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -108,5 +108,5 @@ var DistributedNotebookCluster_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "src/cluster/cluster.proto",
+	Metadata: "src/driver/driver.proto",
 }
