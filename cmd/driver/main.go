@@ -1,17 +1,22 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/maxence-charriere/go-app/v9/pkg/app"
+	"github.com/scusemua/djn-workload-driver/m/v2/src/components"
 	"github.com/scusemua/djn-workload-driver/m/v2/src/driver"
 )
 
 func main() {
-	driver := driver.NewWorkloadDriver()
-
-	app.Route("/", driver)
+	app.RouteFunc("/", func() app.Composer {
+		mainWindow := &components.MainWindow{}
+		driver := driver.NewWorkloadDriver(mainWindow, true)
+		mainWindow.SetWorkloadDriver(driver)
+		return mainWindow
+	})
 
 	// Once the routes set up, the next thing to do is to either launch the app
 	// or the server that serves the app.
@@ -33,13 +38,15 @@ func main() {
 	// required resources to make it work into a web browser. Here it is
 	// configured to handle requests with a path that starts with "/".
 	http.Handle("/", &app.Handler{
-		Name:        "Hello",
-		Description: "An Hello World! example",
+		Name:        "WorkloadDriver",
+		Description: "Workload Driver for the Distributed Jupyter Notebook platform.",
 		Styles: []string{
 			"/web/main.css",
 			"/web/css/docs.css",
 		},
 	})
+
+	fmt.Printf("WorkloadDriver HTTP server is starting now.")
 
 	// TODO(Ben): Make this port configurable.
 	if err := http.ListenAndServe(":8000", nil); err != nil {

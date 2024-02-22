@@ -52,4 +52,6 @@ RUN go mod tidy
 
 RUN make build-all
 
-CMD ["make", "run"]
+EXPOSE 8000
+
+CMD ["go", "run", "cmd/driver/main.go"]
