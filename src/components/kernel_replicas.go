@@ -30,7 +30,7 @@ func (kl *KernelReplicasLabel) Render() app.UI {
 				Body(
 					app.I().
 						Class("fas fa-cube").
-						Style("font-size", fmt.Sprintf("%spx", kl.fontSize)).
+						Style("font-size", fmt.Sprintf("%dpx", kl.fontSize)).
 						Aria("hidden", true),
 				),
 			app.Div().
@@ -38,7 +38,7 @@ func (kl *KernelReplicasLabel) Render() app.UI {
 				Body(
 					app.Span().
 						Text(kl.numReplicas).
-						Style("font-size", fmt.Sprintf("%spx", kl.fontSize)),
+						Style("font-size", fmt.Sprintf("%dpx", kl.fontSize)),
 				),
 		)
 }
