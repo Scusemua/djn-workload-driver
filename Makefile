@@ -9,7 +9,7 @@ build-scss:
 
 build-grpc:
 	@echo "Building gRPC now."
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative src/driver/driver.proto
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative src/gateway/gateway.proto
 
 build:  
 	GOARCH=wasm GOOS=js go build -o web/app.wasm ./cmd/driver

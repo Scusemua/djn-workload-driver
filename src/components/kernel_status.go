@@ -57,7 +57,7 @@ func (ks *KernelStatusLabel) Render() app.UI {
 						Body(
 							app.I().
 								Class(getIconForKernelStatusLabel(ks.status)).
-								Style("font-size", fmt.Sprintf("%spx", ks.fontSize)).
+								Style("font-size", fmt.Sprintf("%dpx", ks.fontSize)).
 								Aria("hidden", true),
 						),
 					app.Div().
@@ -65,7 +65,7 @@ func (ks *KernelStatusLabel) Render() app.UI {
 						Body(
 							app.Span().
 								Text(ks.status).
-								Style("font-size", fmt.Sprintf("%spx", ks.fontSize)),
+								Style("font-size", fmt.Sprintf("%dpx", ks.fontSize)),
 						),
 				),
 		)
