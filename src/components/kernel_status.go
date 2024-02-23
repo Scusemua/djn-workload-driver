@@ -1,8 +1,12 @@
 package components
 
-import "github.com/maxence-charriere/go-app/v9/pkg/app"
+import (
+	"fmt"
 
-func getIconForKernelStatus(status string) string {
+	"github.com/maxence-charriere/go-app/v9/pkg/app"
+)
+
+func getIconForKernelStatusLabel(status string) string {
 	switch status {
 	case "unknown":
 		return "fas fa-question"
@@ -27,19 +31,21 @@ func getIconForKernelStatus(status string) string {
 }
 
 // Displays the aggregate status of a kernel in a KernelList.
-type KernelStatus struct {
+type KernelStatusLabel struct {
 	app.Compo
 
-	status string
+	status   string
+	fontSize int
 }
 
-func NewKernelStatus(status string) *KernelStatus {
-	return &KernelStatus{
-		status: status,
+func NewKernelStatusLabel(status string, fontSize int) *KernelStatusLabel {
+	return &KernelStatusLabel{
+		status:   status,
+		fontSize: fontSize,
 	}
 }
 
-func (ks *KernelStatus) Render() app.UI {
+func (ks *KernelStatusLabel) Render() app.UI {
 	return app.Div().
 		Class("pf-l-flex pf-m-space-items-xs").
 		Body(
@@ -50,8 +56,8 @@ func (ks *KernelStatus) Render() app.UI {
 						Class("pf-l-flex__item").
 						Body(
 							app.I().
-								Class(getIconForKernelStatus(ks.status)).
-								Style("font-size", "24px").
+								Class(getIconForKernelStatusLabel(ks.status)).
+								Style("font-size", fmt.Sprintf("%spx", ks.fontSize)).
 								Aria("hidden", true),
 						),
 					app.Div().
@@ -59,7 +65,7 @@ func (ks *KernelStatus) Render() app.UI {
 						Body(
 							app.Span().
 								Text(ks.status).
-								Style("font-size", "24px"),
+								Style("font-size", fmt.Sprintf("%spx", ks.fontSize)),
 						),
 				),
 		)

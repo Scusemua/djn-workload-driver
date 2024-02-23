@@ -4,19 +4,19 @@ import (
 	"fmt"
 
 	"github.com/maxence-charriere/go-app/v9/pkg/app"
-	"github.com/scusemua/djn-workload-driver/m/v2/src/domain"
+	"github.com/scusemua/djn-workload-driver/m/v2/src/driver"
 )
 
 type GatewayConnectionWindow struct {
 	app.Compo
 
-	workloadDriver domain.WorkloadDriver
-	errorHandler   domain.ErrorHandler
+	workloadDriver driver.WorkloadDriver
+	errorHandler   driver.ErrorHandler
 
 	gatewayAddress string
 }
 
-func NewGatewayConnectionWindow(workloadDriver domain.WorkloadDriver, errorHandler domain.ErrorHandler) *GatewayConnectionWindow {
+func NewGatewayConnectionWindow(workloadDriver driver.WorkloadDriver, errorHandler driver.ErrorHandler) *GatewayConnectionWindow {
 	return &GatewayConnectionWindow{
 		workloadDriver: workloadDriver,
 		errorHandler:   errorHandler,
@@ -89,7 +89,7 @@ func (w *GatewayConnectionWindow) Render() app.UI {
 						Text("Connect").
 						OnClick(func(ctx app.Context, e app.Event) {
 							if w.gatewayAddress == "" {
-								w.errorHandler.HandleError(domain.ErrEmptyGatewayAddr, "Cluster Gateway IP address cannot be the empty string.")
+								w.errorHandler.HandleError(driver.ErrEmptyGatewayAddr, "Cluster Gateway IP address cannot be the empty string.")
 							} else {
 								// w.logger.Info(fmt.Sprintf("Connect clicked! Attempting to connect to Gateway (via gRPC) at %s now...", w.gatewayAddress))
 								app.Logf("Connect clicked! Attempting to connect to Gateway (via gRPC) at %s now...", w.gatewayAddress)

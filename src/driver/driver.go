@@ -2,31 +2,31 @@ package driver
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/maxence-charriere/go-app/v9/pkg/app"
 	cmap "github.com/orcaman/concurrent-map/v2"
-	"github.com/scusemua/djn-workload-driver/m/v2/src/domain"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
 type workloadDriverImpl struct {
-	rpcClient              DistributedNotebookClusterClient            // gRPC client to the Cluster Gateway.
-	connectedToGateway     bool                                        // Flag indicating whether or not we're currently connected to the Cluster Gateway.
-	gatewayAddress         string                                      // IP address of the Gateway.
-	kernels                *cmap.ConcurrentMap[string, *JupyterKernel] // Currently-active Jupyter kernels (that we know about).
-	errorHandler           domain.ErrorHandler                         // Pass errors here to be displayed to the user.
-	spoofGatewayConnection bool                                        // Used for development when not actually using a real cluster.
+	rpcClient              DistributedNotebookClusterClient                       // gRPC client to the Cluster Gateway.
+	connectedToGateway     bool                                                   // Flag indicating whether or not we're currently connected to the Cluster Gateway.
+	gatewayAddress         string                                                 // IP address of the Gateway.
+	kernels                *cmap.ConcurrentMap[string, *DistributedJupyterKernel] // Currently-active Jupyter kernels (that we know about). Map from Kernel ID to Kernel.
+	errorHandler           ErrorHandler                                           // Pass errors here to be displayed to the user.
+	spoofGatewayConnection bool                                                   // Used for development when not actually using a real cluster.
 
 	// logger *zap.Logger // Logger. Presently unused.
 }
 
-func NewWorkloadDriver(errorHandler domain.ErrorHandler, spoofGatewayConnection bool) *workloadDriverImpl {
-	kernelMap := cmap.New[*JupyterKernel]()
+func NewWorkloadDriver(errorHandler ErrorHandler, spoofGatewayConnection bool) *workloadDriverImpl {
+	kernelMap := cmap.New[*DistributedJupyterKernel]()
 	driver := &workloadDriverImpl{
 		kernels:                &kernelMap,
 		errorHandler:           errorHandler,
@@ -38,7 +38,7 @@ func NewWorkloadDriver(errorHandler domain.ErrorHandler, spoofGatewayConnection 
 	// 	panic(err)
 	// }
 
-	// driver.logger = logger
+	// logger = logger
 
 	return driver
 }
@@ -57,12 +57,12 @@ func (d *workloadDriverImpl) DialGatewayGRPC(gatewayAddress string) error {
 		time.Sleep(time.Second * 1)
 		d.connectedToGateway = true
 		d.gatewayAddress = gatewayAddress
-		d.fetchKernels()
+		d.RefreshKernels()
 		return nil
 	}
 
 	if gatewayAddress == "" {
-		return domain.ErrEmptyGatewayAddr
+		return ErrEmptyGatewayAddr
 	}
 
 	// d.logger.Info(fmt.Sprintf("Attempting to dial Gateway gRPC server now. Address: %s\n", d.gatewayAddress))
@@ -83,8 +83,12 @@ func (d *workloadDriverImpl) DialGatewayGRPC(gatewayAddress string) error {
 	d.connectedToGateway = true
 	d.gatewayAddress = gatewayAddress
 
-	d.fetchKernels()
+	d.RefreshKernels()
 
+	return nil
+}
+
+func (d *workloadDriverImpl) MigrateKernelReplica(arg *JupyterKernelArg) error {
 	return nil
 }
 
@@ -96,45 +100,109 @@ func (d *workloadDriverImpl) NumKernels() int32 {
 	return int32(d.kernels.Count())
 }
 
-func (d *workloadDriverImpl) Kernels() []domain.Kernel {
-	kernels := make([]domain.Kernel, 0, d.NumKernels())
+func (d *workloadDriverImpl) Kernels() []*DistributedJupyterKernel {
+	kernels := make([]*DistributedJupyterKernel, 0, d.NumKernels())
 
 	for kvPair := range d.kernels.IterBuffered() {
-		kernels = append(kernels, kvPair.Val)
+		kernel := kvPair.Val
+		kernels = append(kernels, kernel)
 	}
 
 	return kernels
 }
 
-func (d *workloadDriverImpl) fetchKernels() {
+func (d *workloadDriverImpl) spoofKernel() *DistributedJupyterKernel {
+	status := KernelStatuses[rand.Intn(len(KernelStatuses))]
+	numReplicas := rand.Intn(5-2) + 2
+	kernelId := uuid.New().String()
+	// Spoof the kernel itself.
+	kernel := &DistributedJupyterKernel{
+		KernelId:            kernelId,
+		NumReplicas:         int32(numReplicas),
+		Status:              status,
+		AggregateBusyStatus: status,
+		Replicas:            make([]*JupyterKernelReplica, 0, numReplicas),
+	}
+
+	// Spoof the kernel's replicas.
+	for j := 0; j < numReplicas; j++ {
+		podId := fmt.Sprintf("kernel-%s-%s", kernelId, uuid.New().String()[0:5])
+		replica := &JupyterKernelReplica{
+			ReplicaId: int32(j),
+			KernelId:  kernelId,
+			PodId:     podId,
+			NodeId:    fmt.Sprintf("Node-%d", rand.Intn(4-1)+1),
+		}
+		kernel.Replicas = append(kernel.Replicas, replica)
+	}
+
+	return kernel
+}
+
+func (d *workloadDriverImpl) spoofInitialKernels() {
+	numKernels := rand.Intn(16-2) + 2
+
+	for i := 0; i < numKernels; i++ {
+		kernel := d.spoofKernel()
+		d.kernels.Set(kernel.GetKernelId(), kernel)
+	}
+}
+
+func (d *workloadDriverImpl) RefreshKernels() []*DistributedJupyterKernel {
 	if d.spoofGatewayConnection {
-		numKernels := rand.Intn(16-2) + 2
+		// If we've already generated some kernels, then we'll randomly remove a few and add a few.
+		if d.kernels.Count() > 0 {
+			maxChange := int(0.25 * float64(d.kernels.Count())) // Add and remove up to 25% of the existing number of kernels.
+			numToDelete := rand.Intn(maxChange + 1)             // Delete UP TO this many.
+			numToAdd := rand.Intn(maxChange + 1)
 
-		statuses := []string{"unknown", "starting", "idle", "busy", "terminating", "restarting", "autorestarting", "dead"}
+			app.Logf("Adding %d new kernel(s) and removing up to %d existing kernel(s).", numToAdd, numToDelete)
 
-		for i := 0; i < numKernels; i++ {
-			status := statuses[rand.Intn(len(statuses))]
-			kernel := &JupyterKernel{
-				KernelId:            uuid.New().String(),
-				NumReplicas:         int32(rand.Intn(5-2) + 2),
-				Status:              status,
-				AggregateBusyStatus: status,
+			if numToDelete > 0 {
+				currentKernels := d.Kernels()
+				toDelete := make([]string, 0, numToDelete)
+
+				for i := 0; i < numToDelete; i++ {
+					// We may select the same victim multiple times. It will only be deleted once, of course.
+					victimIdx := rand.Intn(len(currentKernels))
+					toDelete = append(toDelete, currentKernels[victimIdx].GetKernelId())
+				}
+
+				numDeleted := 0
+				// Delete the victims.
+				for _, id := range toDelete {
+					// Make sure we didn't already delete this one.
+					if _, ok := d.kernels.Get(id); ok {
+						d.kernels.Remove(id)
+						numDeleted++
+					}
+				}
+
+				app.Log("Removed %d kernel(s).", numDeleted)
 			}
-			d.kernels.Set(kernel.KernelId, kernel)
+
+			for i := 0; i < numToAdd; i++ {
+				kernel := d.spoofKernel()
+				d.kernels.Set(kernel.GetKernelId(), kernel)
+			}
+		} else {
+			d.spoofInitialKernels()
 		}
 
-		return
+		return d.Kernels()
 	}
 
 	app.Log("Fetching kernels now.")
 	resp, err := d.rpcClient.ListKernels(context.TODO(), &Void{})
 	if err != nil {
 		d.errorHandler.HandleError(err, "Failed to fetch list of active kernels from the Cluster Gateway.")
-		return
+		return d.Kernels()
 	}
 
 	for _, kernel := range resp.Kernels {
 		d.kernels.Set(kernel.KernelId, kernel)
 		app.Log("Discovered active kernel! ID=%s, NumReplicas=%d, Status1=%s, Status2=%s", kernel.KernelId, kernel.NumReplicas, kernel.Status, kernel.AggregateBusyStatus)
 	}
+
+	return d.Kernels()
 }

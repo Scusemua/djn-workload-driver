@@ -2,18 +2,18 @@ package components
 
 import (
 	"github.com/maxence-charriere/go-app/v9/pkg/app"
-	"github.com/scusemua/djn-workload-driver/m/v2/src/domain"
+	"github.com/scusemua/djn-workload-driver/m/v2/src/driver"
 )
 
 type MainWindow struct {
 	app.Compo
 
-	workloadDriver domain.WorkloadDriver // The Workload Driver.
+	workloadDriver driver.WorkloadDriver // The Workload Driver.
 	errMsg         string                // Current error message.
 	err            error                 // Current operational error.
 }
 
-func (w *MainWindow) SetWorkloadDriver(driver domain.WorkloadDriver) {
+func (w *MainWindow) SetWorkloadDriver(driver driver.WorkloadDriver) {
 	w.workloadDriver = driver
 }
 

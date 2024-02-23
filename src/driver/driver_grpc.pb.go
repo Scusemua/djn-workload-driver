@@ -19,7 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	DistributedNotebookCluster_ListKernels_FullMethodName = "/driver.DistributedNotebookCluster/ListKernels"
+	DistributedNotebookCluster_ListKernels_FullMethodName          = "/driver.DistributedNotebookCluster/ListKernels"
+	DistributedNotebookCluster_MigrateKernelReplica_FullMethodName = "/driver.DistributedNotebookCluster/MigrateKernelReplica"
 )
 
 // DistributedNotebookClusterClient is the client API for DistributedNotebookCluster service.
@@ -28,6 +29,7 @@ const (
 type DistributedNotebookClusterClient interface {
 	// Return a list of all of the current kernel IDs.
 	ListKernels(ctx context.Context, in *Void, opts ...grpc.CallOption) (*ListKernelsResponse, error)
+	MigrateKernelReplica(ctx context.Context, in *JupyterKernelArg, opts ...grpc.CallOption) (*MigrateKernelResponse, error)
 }
 
 type distributedNotebookClusterClient struct {
@@ -47,12 +49,22 @@ func (c *distributedNotebookClusterClient) ListKernels(ctx context.Context, in *
 	return out, nil
 }
 
+func (c *distributedNotebookClusterClient) MigrateKernelReplica(ctx context.Context, in *JupyterKernelArg, opts ...grpc.CallOption) (*MigrateKernelResponse, error) {
+	out := new(MigrateKernelResponse)
+	err := c.cc.Invoke(ctx, DistributedNotebookCluster_MigrateKernelReplica_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DistributedNotebookClusterServer is the server API for DistributedNotebookCluster service.
 // All implementations must embed UnimplementedDistributedNotebookClusterServer
 // for forward compatibility
 type DistributedNotebookClusterServer interface {
 	// Return a list of all of the current kernel IDs.
 	ListKernels(context.Context, *Void) (*ListKernelsResponse, error)
+	MigrateKernelReplica(context.Context, *JupyterKernelArg) (*MigrateKernelResponse, error)
 	mustEmbedUnimplementedDistributedNotebookClusterServer()
 }
 
@@ -62,6 +74,9 @@ type UnimplementedDistributedNotebookClusterServer struct {
 
 func (UnimplementedDistributedNotebookClusterServer) ListKernels(context.Context, *Void) (*ListKernelsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListKernels not implemented")
+}
+func (UnimplementedDistributedNotebookClusterServer) MigrateKernelReplica(context.Context, *JupyterKernelArg) (*MigrateKernelResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MigrateKernelReplica not implemented")
 }
 func (UnimplementedDistributedNotebookClusterServer) mustEmbedUnimplementedDistributedNotebookClusterServer() {
 }
@@ -95,6 +110,24 @@ func _DistributedNotebookCluster_ListKernels_Handler(srv interface{}, ctx contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DistributedNotebookCluster_MigrateKernelReplica_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(JupyterKernelArg)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DistributedNotebookClusterServer).MigrateKernelReplica(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DistributedNotebookCluster_MigrateKernelReplica_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DistributedNotebookClusterServer).MigrateKernelReplica(ctx, req.(*JupyterKernelArg))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // DistributedNotebookCluster_ServiceDesc is the grpc.ServiceDesc for DistributedNotebookCluster service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -105,6 +138,10 @@ var DistributedNotebookCluster_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListKernels",
 			Handler:    _DistributedNotebookCluster_ListKernels_Handler,
+		},
+		{
+			MethodName: "MigrateKernelReplica",
+			Handler:    _DistributedNotebookCluster_MigrateKernelReplica_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
