@@ -1,21 +1,27 @@
 package components
 
-import "github.com/maxence-charriere/go-app/v9/pkg/app"
+import (
+	"fmt"
+
+	"github.com/maxence-charriere/go-app/v9/pkg/app"
+)
 
 // Displays the number of replicas a kernel has in a KernelList.
-type KernelReplicas struct {
+type KernelReplicasLabel struct {
 	app.Compo
 
 	numReplicas int32
+	fontSize    int
 }
 
-func NewKernelReplicas(numReplicas int32) *KernelReplicas {
-	return &KernelReplicas{
+func NewKernelReplicasLabel(numReplicas int32, fontSize int) *KernelReplicasLabel {
+	return &KernelReplicasLabel{
 		numReplicas: numReplicas,
+		fontSize:    fontSize,
 	}
 }
 
-func (ks *KernelReplicas) Render() app.UI {
+func (kl *KernelReplicasLabel) Render() app.UI {
 	return app.Div().
 		Class("pf-l-flex pf-m-space-items-xs").
 		Body(
@@ -24,15 +30,15 @@ func (ks *KernelReplicas) Render() app.UI {
 				Body(
 					app.I().
 						Class("fas fa-cube").
-						Style("font-size", "24px").
+						Style("font-size", fmt.Sprintf("%spx", kl.fontSize)).
 						Aria("hidden", true),
 				),
 			app.Div().
 				Class("pf-l-flex__item").
 				Body(
 					app.Span().
-						Text(ks.numReplicas).
-						Style("font-size", "24px"),
+						Text(kl.numReplicas).
+						Style("font-size", fmt.Sprintf("%spx", kl.fontSize)),
 				),
 		)
 }
