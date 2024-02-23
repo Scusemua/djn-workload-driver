@@ -39,9 +39,10 @@ func (w *GatewayConnectionWindow) Render() app.UI {
 				Class("pf-c-empty-state__content").
 				Body(
 					app.I().
-						Class("fas fa-laptop-code pf-c-empty-state__icon").
+						// Class("pf-c-empty-state__icon").
+						Style("content", "url(\"/web/icons/cloud-disconnected.svg\")").
 						Style("color", "#203250").
-						Style("font-size", "96px").
+						Style("font-size", "128px").
 						Aria("hidden", true),
 					app.H1().
 						Class("pf-c-title pf-m-lg").
