@@ -15,9 +15,9 @@ import (
 )
 
 type workloadDriverImpl struct {
-	rpcClient          DistributedNotebookClusterClient // gRPC client to the Cluster Gateway.
-	connectedToGateway bool                             // Flag indicating whether or not we're currently connected to the Cluster Gateway.
-
+	rpcClient              DistributedNotebookClusterClient            // gRPC client to the Cluster Gateway.
+	connectedToGateway     bool                                        // Flag indicating whether or not we're currently connected to the Cluster Gateway.
+	gatewayAddress         string                                      // IP address of the Gateway.
 	kernels                *cmap.ConcurrentMap[string, *JupyterKernel] // Currently-active Jupyter kernels (that we know about).
 	errorHandler           domain.ErrorHandler                         // Pass errors here to be displayed to the user.
 	spoofGatewayConnection bool                                        // Used for development when not actually using a real cluster.
@@ -56,6 +56,7 @@ func (d *workloadDriverImpl) DialGatewayGRPC(gatewayAddress string) error {
 		app.Logf("Spoofing RPC connection to Cluster Gateway...")
 		time.Sleep(time.Second * 1)
 		d.connectedToGateway = true
+		d.gatewayAddress = gatewayAddress
 		d.fetchKernels()
 		return nil
 	}
@@ -80,10 +81,15 @@ func (d *workloadDriverImpl) DialGatewayGRPC(gatewayAddress string) error {
 	app.Logf("Successfully dialed Cluster Gateway at address %s.\n", gatewayAddress)
 	d.rpcClient = NewDistributedNotebookClusterClient(conn)
 	d.connectedToGateway = true
+	d.gatewayAddress = gatewayAddress
 
 	d.fetchKernels()
 
 	return nil
+}
+
+func (d *workloadDriverImpl) GatewayAddress() string {
+	return d.gatewayAddress
 }
 
 func (d *workloadDriverImpl) NumKernels() int32 {
