@@ -44,6 +44,9 @@ func main() {
 			"/web/main.css",
 			"/web/css/docs.css",
 		},
+		Icon: app.Icon{
+			SVG: "/web/icon.svg",
+		},
 	})
 
 	fmt.Printf("WorkloadDriver HTTP server is starting now.")

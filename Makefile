@@ -25,5 +25,7 @@ build-docker:
 	sudo docker build --tag $(DOCKERUSER)/workload-driver:latest .
 	sudo docker push $(DOCKERUSER)/workload-driver:latest 
 
+build-and-run: build-all run
+
 run: 
 	go run cmd/driver/main.go

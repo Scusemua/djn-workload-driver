@@ -2,8 +2,10 @@ package driver
 
 import (
 	"context"
+	"math/rand"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/maxence-charriere/go-app/v9/pkg/app"
 	cmap "github.com/orcaman/concurrent-map/v2"
 	"github.com/scusemua/djn-workload-driver/m/v2/src/domain"
@@ -52,8 +54,9 @@ func (d *workloadDriverImpl) ConnectedToGateway() bool {
 func (d *workloadDriverImpl) DialGatewayGRPC(gatewayAddress string) error {
 	if d.spoofGatewayConnection {
 		app.Logf("Spoofing RPC connection to Cluster Gateway...")
-		time.Sleep(time.Second * 3)
+		time.Sleep(time.Second * 1)
 		d.connectedToGateway = true
+		d.fetchKernels()
 		return nil
 	}
 
@@ -78,6 +81,8 @@ func (d *workloadDriverImpl) DialGatewayGRPC(gatewayAddress string) error {
 	d.rpcClient = NewDistributedNotebookClusterClient(conn)
 	d.connectedToGateway = true
 
+	d.fetchKernels()
+
 	return nil
 }
 
@@ -96,6 +101,25 @@ func (d *workloadDriverImpl) Kernels() []domain.Kernel {
 }
 
 func (d *workloadDriverImpl) fetchKernels() {
+	if d.spoofGatewayConnection {
+		numKernels := rand.Intn(16-2) + 2
+
+		statuses := []string{"unknown", "starting", "idle", "busy", "terminating", "restarting", "autorestarting", "dead"}
+
+		for i := 0; i < numKernels; i++ {
+			status := statuses[rand.Intn(len(statuses))]
+			kernel := &JupyterKernel{
+				KernelId:            uuid.New().String(),
+				NumReplicas:         int32(rand.Intn(5-2) + 2),
+				Status:              status,
+				AggregateBusyStatus: status,
+			}
+			d.kernels.Set(kernel.KernelId, kernel)
+		}
+
+		return
+	}
+
 	app.Log("Fetching kernels now.")
 	resp, err := d.rpcClient.ListKernels(context.TODO(), &Void{})
 	if err != nil {

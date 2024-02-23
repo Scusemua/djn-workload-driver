@@ -5,6 +5,10 @@ import (
 	"github.com/scusemua/djn-workload-driver/m/v2/src/domain"
 )
 
+const (
+	keyListID = "kernel-list"
+)
+
 type KernelList struct {
 	app.Compo
 
@@ -18,5 +22,59 @@ func NewKernelList(kernelProvider domain.KernelProvider) *KernelList {
 }
 
 func (kl *KernelList) Render() app.UI {
-	return app.Div()
+	// We're gonna use this a lot here.
+	kernels := kl.kernelProvider.Kernels()
+
+	app.Logf("Rendering KernelList with %d kernels.", len(kernels))
+
+	return app.Div().
+		Class("pf-c-data-list pf-m-grid-md").
+		Aria("label", "Kernel list").
+		ID(keyListID).
+		Body(
+			app.Range(kernels).Slice(func(i int) app.UI {
+				return app.Li().
+					Class("pf-c-data-list__item").
+					Body(
+						app.Div().
+							Class("pf-c-data-list__item-row").
+							Body(
+								app.Div().
+									Class("pf-c-data-list__item-content").
+									Body(
+										app.Div().
+											Class("pf-c-data-list__cell pf-m-align-left").
+											Body(
+												app.Div().
+													Class("pf-l-flex pf-m-column pf-m-space-items-none").
+													Body(
+														app.Div().
+															Class("pf-l-flex pf-m-column").
+															Body(
+																app.P().
+																	Text("Kernel "+kernels[i].GetKernelId()).
+																	Style("font-weight", "bold").
+																	Style("font-size", "32px"),
+															),
+													),
+												app.Div().
+													Class("pf-l-flex pf-m-wrap").
+													Body(
+														NewKernelReplicas(kernels[i].GetNumReplicas()),
+														NewKernelStatus(kernels[i].GetStatus())),
+											),
+										app.Div().
+											Class("pf-c-data-list__cell pf-m-align-right pf-m-no-fill").
+											Body(
+												app.Button().
+													Class("pf-c-button pf-m-secondary pf-m-danger").
+													Type("button").
+													Text("Terminate").
+													Style("font-size", "24px"),
+											),
+									),
+							),
+					)
+			}),
+		)
 }
