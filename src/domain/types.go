@@ -39,6 +39,7 @@ type Kernel interface {
 }
 
 type KernelProvider interface {
-	NumKernels() int32
-	Kernels() []Kernel
+	NumKernels() int32      // Number of currently-active kernels.
+	Kernels() []Kernel      // List of currently-active kernels.
+	GatewayAddress() string // Return the address of the Cluster Gateway from which the list of kernels was retrieved.
 }
