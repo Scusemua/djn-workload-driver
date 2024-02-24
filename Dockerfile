@@ -47,6 +47,8 @@ COPY web/ web/
 COPY Makefile . 
 COPY go.mod .
 COPY go.sum . 
+COPY api/proto api/proto
+COPY resources/config.yaml config.yaml 
 
 RUN go mod tidy
 
@@ -54,4 +56,4 @@ RUN make build-all
 
 EXPOSE 8000
 
-CMD ["go", "run", "cmd/driver/main.go"]
+CMD ["go", "run", "cmd/driver/main.go", "--config", "/web/config.yaml"]

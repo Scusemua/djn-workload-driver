@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.3.0
 // - protoc             v3.15.8
-// source: src/gateway/gateway.proto
+// source: api/proto/gateway.proto
 
 package gateway
 
@@ -26,6 +26,7 @@ const (
 	ClusterGateway_SmrReady_FullMethodName               = "/gateway.ClusterGateway/SmrReady"
 	ClusterGateway_SmrNodeAdded_FullMethodName           = "/gateway.ClusterGateway/SmrNodeAdded"
 	ClusterGateway_ListKernels_FullMethodName            = "/gateway.ClusterGateway/ListKernels"
+	ClusterGateway_GetKubernetesNodes_FullMethodName     = "/gateway.ClusterGateway/GetKubernetesNodes"
 )
 
 // ClusterGatewayClient is the client API for ClusterGateway service.
@@ -49,6 +50,8 @@ type ClusterGatewayClient interface {
 	SmrNodeAdded(ctx context.Context, in *ReplicaInfo, opts ...grpc.CallOption) (*Void, error)
 	// Return a list of all of the current kernel IDs.
 	ListKernels(ctx context.Context, in *Void, opts ...grpc.CallOption) (*ListKernelsResponse, error)
+	// Return a list of the Kubernetes nodes available within the Kubernetes cluster.
+	GetKubernetesNodes(ctx context.Context, in *Void, opts ...grpc.CallOption) (*GetKubernetesNodesResponse, error)
 }
 
 type clusterGatewayClient struct {
@@ -122,6 +125,15 @@ func (c *clusterGatewayClient) ListKernels(ctx context.Context, in *Void, opts .
 	return out, nil
 }
 
+func (c *clusterGatewayClient) GetKubernetesNodes(ctx context.Context, in *Void, opts ...grpc.CallOption) (*GetKubernetesNodesResponse, error) {
+	out := new(GetKubernetesNodesResponse)
+	err := c.cc.Invoke(ctx, ClusterGateway_GetKubernetesNodes_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ClusterGatewayServer is the server API for ClusterGateway service.
 // All implementations must embed UnimplementedClusterGatewayServer
 // for forward compatibility
@@ -143,6 +155,8 @@ type ClusterGatewayServer interface {
 	SmrNodeAdded(context.Context, *ReplicaInfo) (*Void, error)
 	// Return a list of all of the current kernel IDs.
 	ListKernels(context.Context, *Void) (*ListKernelsResponse, error)
+	// Return a list of the Kubernetes nodes available within the Kubernetes cluster.
+	GetKubernetesNodes(context.Context, *Void) (*GetKubernetesNodesResponse, error)
 	mustEmbedUnimplementedClusterGatewayServer()
 }
 
@@ -170,6 +184,9 @@ func (UnimplementedClusterGatewayServer) SmrNodeAdded(context.Context, *ReplicaI
 }
 func (UnimplementedClusterGatewayServer) ListKernels(context.Context, *Void) (*ListKernelsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListKernels not implemented")
+}
+func (UnimplementedClusterGatewayServer) GetKubernetesNodes(context.Context, *Void) (*GetKubernetesNodesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetKubernetesNodes not implemented")
 }
 func (UnimplementedClusterGatewayServer) mustEmbedUnimplementedClusterGatewayServer() {}
 
@@ -310,6 +327,24 @@ func _ClusterGateway_ListKernels_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ClusterGateway_GetKubernetesNodes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Void)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ClusterGatewayServer).GetKubernetesNodes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ClusterGateway_GetKubernetesNodes_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ClusterGatewayServer).GetKubernetesNodes(ctx, req.(*Void))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ClusterGateway_ServiceDesc is the grpc.ServiceDesc for ClusterGateway service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -345,9 +380,13 @@ var ClusterGateway_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "ListKernels",
 			Handler:    _ClusterGateway_ListKernels_Handler,
 		},
+		{
+			MethodName: "GetKubernetesNodes",
+			Handler:    _ClusterGateway_GetKubernetesNodes_Handler,
+		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "src/gateway/gateway.proto",
+	Metadata: "api/proto/gateway.proto",
 }
 
 const (
@@ -835,5 +874,5 @@ var LocalGateway_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "src/gateway/gateway.proto",
+	Metadata: "api/proto/gateway.proto",
 }

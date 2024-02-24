@@ -32,7 +32,8 @@ service ClusterGateway {
   // Return a list of all of the current kernel IDs.
   rpc ListKernels(Void) returns (ListKernelsResponse) {}
 
-  // rpc SmrNodeRemoved(ReplicaInfo) returns (Void) {}
+  // Return a list of the Kubernetes nodes available within the Kubernetes cluster.
+  rpc GetKubernetesNodes(Void) returns (GetKubernetesNodesResponse) {}
 }
 
 message JupyterKernelReplica {
@@ -105,6 +106,23 @@ service LocalGateway {
   // This involves writing the contents of the etcd-raft data directory to HDFS so that
   // it can be read back from HDFS by the new replica.
   rpc PrepareToMigrate(ReplicaInfo) returns (PrepareToMigrateResponse) {}
+}
+
+message GetKubernetesNodesResponse {
+  repeated KubernetesNode nodes = 1;
+}
+
+message KubernetesNode {
+  string nodeId = 1;
+  repeated string pods = 2;
+  float allocatableCPU = 3;
+  float allocatableMemory = 4;
+  float allocatableGPUs = 5;
+  float allocatableVGPUs = 6;
+  float allocatedCPU = 7;
+  float allocatedMemory = 8;
+  float allocatedGPUs = 9;
+  float allocatedVGPUs = 10;
 }
 
 // The input for starting a kernel replica.
