@@ -19,6 +19,17 @@ type Modal struct {
 	removeEventListener func()
 }
 
+func handleCancel(clear func(), dirty bool, cancel func(bool, chan struct{})) {
+	done := make(chan struct{})
+
+	go func() {
+		<-done
+
+		clear()
+	}()
+	cancel(dirty, done)
+}
+
 func (c *Modal) Render() app.UI {
 	classes := "pf-c-modal-box pf-m-modal pf-m-sm"
 	if c.Class != "" {

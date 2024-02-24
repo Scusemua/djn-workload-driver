@@ -4,17 +4,21 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/maxence-charriere/go-app/v9/pkg/app"
 	"github.com/scusemua/djn-workload-driver/m/v2/src/components"
+	"github.com/scusemua/djn-workload-driver/m/v2/src/config"
 	"github.com/scusemua/djn-workload-driver/m/v2/src/driver"
 )
 
 func main() {
+	conf := config.GetConfiguration()
+
 	app.RouteFunc("/", func() app.Composer {
-		mainWindow := &components.MainWindow{}
-		driver := driver.NewWorkloadDriver(mainWindow, true, time.Second*5)
+		mainWindow := &components.MainWindow{
+			GatewayAddress: components.DefaultGatewayAddress,
+		}
+		driver := driver.NewWorkloadDriver(mainWindow, conf)
 		mainWindow.SetWorkloadDriver(driver)
 		driver.Start()
 		return mainWindow

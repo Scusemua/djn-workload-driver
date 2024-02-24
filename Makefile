@@ -9,9 +9,10 @@ build-scss:
 
 build-grpc:
 	@echo "Building gRPC now."
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative src/gateway/gateway.proto
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative api/proto/gateway.proto
 
 build:  
+	cp resources/config.yaml web/config.yaml
 	GOARCH=wasm GOOS=js go build -o web/app.wasm ./cmd/driver
 	go build ./cmd/driver
 
@@ -28,4 +29,4 @@ build-docker:
 build-and-run: build-all run
 
 run: 
-	go run cmd/driver/main.go
+	go run cmd/driver/main.go --config web/config.yaml

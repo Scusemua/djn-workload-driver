@@ -5,8 +5,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/maxence-charriere/go-app/v9/pkg/app"
-	"github.com/scusemua/djn-workload-driver/m/v2/src/driver"
-	"github.com/scusemua/djn-workload-driver/m/v2/src/gateway"
+	gateway "github.com/scusemua/djn-workload-driver/m/v2/api/proto"
+	"github.com/scusemua/djn-workload-driver/m/v2/src/domain"
 )
 
 const (
@@ -16,53 +16,77 @@ const (
 type KernelList struct {
 	app.Compo
 
-	kernels []*gateway.DistributedJupyterKernel
+	Kernels []*gateway.DistributedJupyterKernel
 
 	id             string
-	workloadDriver driver.WorkloadDriver
-	errorHandler   driver.ErrorHandler
+	workloadDriver domain.WorkloadDriver
+	errorHandler   domain.ErrorHandler
 	expanded       []bool
 	selected       []bool
+
+	onMigrateButtonClicked MigrateButtonClickedHandler
 }
 
-func NewKernelList(workloadDriver driver.WorkloadDriver, errorHandler driver.ErrorHandler) *KernelList {
+func NewKernelList(workloadDriver domain.WorkloadDriver, errorHandler domain.ErrorHandler, onMigrateButtonClicked MigrateButtonClickedHandler) *KernelList {
 	kl := &KernelList{
-		id:             fmt.Sprintf("KernelList-%s", uuid.New().String()[0:26]),
-		workloadDriver: workloadDriver,
-		errorHandler:   errorHandler,
+		id:                     fmt.Sprintf("KernelList-%s", uuid.New().String()[0:26]),
+		workloadDriver:         workloadDriver,
+		errorHandler:           errorHandler,
+		onMigrateButtonClicked: onMigrateButtonClicked,
 	}
+
+	kl.recreateState(workloadDriver.Kernels())
+
+	app.Logf("Created new KL: %s. Number of kernels: %d.", kl.id, len(kl.Kernels))
 
 	return kl
 }
 
-func (kl *KernelList) handleKernelsRefresh(kernels []*gateway.DistributedJupyterKernel) {
-	app.Logf("KernelList %s is handling a kernel refresh.", kl.id)
-
-	kl.kernels = kernels
+func (kl *KernelList) recreateState(kernels []*gateway.DistributedJupyterKernel) {
+	kl.Kernels = kernels
 	kl.selected = make([]bool, 0, len(kernels))
 	kl.expanded = make([]bool, 0, len(kernels))
 
 	for i := 0; i < len(kernels); i++ {
 		kl.selected = append(kl.selected, false)
 		kl.expanded = append(kl.expanded, false)
+
+		jsObject := app.Window().GetElementByID(fmt.Sprintf("kernel-expand-icon-%d", i)).JSValue()
+
+		if jsObject != nil && !jsObject.IsNull() {
+			classListJS := jsObject.Get("classList")
+			classListJS.Call("remove", "fa-angle-down")
+			classListJS.Call("add", "fa-angle-right")
+		}
 	}
 }
 
-func (kl *KernelList) OnMount(ctx app.Context) {
-	ctx.Async(func() {
-		kl.workloadDriver.ManuallyRefreshKernels()
+func (kl *KernelList) handleKernelsRefresh(kernels []*gateway.DistributedJupyterKernel) {
+	if !kl.Mounted() {
+		app.Logf("KernelList %s (%p) is not mounted; ignoring refresh.", kl.id, kl)
+		return
+	}
 
-		ctx.Dispatch(func(ctx app.Context) {
-			kl.handleKernelsRefresh(kl.workloadDriver.Kernels())
-		})
-	})
+	app.Logf("KernelList %s (%p) is handling a kernel refresh.", kl.id, kl)
+	kl.recreateState(kernels)
+	kl.Update()
+}
+
+func (kl *KernelList) OnMount(ctx app.Context) {
+	kl.workloadDriver.SubscribeToRefreshes(kl.id, kl.handleKernelsRefresh)
+
+	go kl.workloadDriver.RefreshKernels()
+}
+
+func (kl *KernelList) OnDismount(ctx app.Context) {
+	kl.workloadDriver.UnsubscribeFromRefreshes(kl.id)
 }
 
 func (kl *KernelList) Render() app.UI {
 	// We're gonna use this a lot here.
-	kernels := kl.kernels
+	kernels := kl.Kernels
 
-	app.Logf("Rendering KernelList with %d kernels.", len(kernels))
+	app.Logf("[%p] Rendering KernelList with %d kernels.", kl, len(kernels))
 
 	return app.Div().
 		Body(
@@ -80,13 +104,7 @@ func (kl *KernelList) Render() app.UI {
 							e.StopImmediatePropagation()
 							app.Log("Refreshing kernels in kernel list.")
 
-							ctx.Async(func() {
-								kl.workloadDriver.ManuallyRefreshKernels()
-
-								ctx.Dispatch(func(ctx app.Context) {
-									kl.handleKernelsRefresh(kl.workloadDriver.Kernels())
-								})
-							})
+							go kl.workloadDriver.RefreshKernels()
 						}),
 					app.Button().
 						Class("pf-c-button pf-m-primary pf-m-danger").
@@ -96,12 +114,12 @@ func (kl *KernelList) Render() app.UI {
 						OnClick(func(ctx app.Context, e app.Event) {
 							e.StopImmediatePropagation()
 
-							kernelsToTerminate := make([]*gateway.DistributedJupyterKernel, 0, len(kl.kernels))
+							kernelsToTerminate := make([]*gateway.DistributedJupyterKernel, 0, len(kl.Kernels))
 
 							for i, selected := range kl.selected {
 								if selected {
-									app.Logf("Kernel %s is selected. Will be terminating it.", kl.kernels[i].GetKernelId())
-									kernelsToTerminate = append(kernelsToTerminate, kl.kernels[i])
+									app.Logf("Kernel %s is selected. Will be terminating it.", kl.Kernels[i].GetKernelId())
+									kernelsToTerminate = append(kernelsToTerminate, kl.Kernels[i])
 								}
 							}
 
@@ -212,7 +230,7 @@ func (kl *KernelList) Render() app.UI {
 											),
 											app.TBody().Role("rowgroup").Body(
 												app.Range(kernels[i].GetReplicas()).Slice(func(j int) app.UI {
-													return NewKernelReplicaRow(kernels[i].GetReplicas()[j], kl, kl.workloadDriver, kl.errorHandler)
+													return NewKernelReplicaRow(kernels[i].GetReplicas()[j], kl.onMigrateButtonClicked, kl.workloadDriver, kl.errorHandler)
 												},
 												),
 											),
