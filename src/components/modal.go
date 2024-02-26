@@ -31,13 +31,13 @@ func handleCancel(clear func(), dirty bool, cancel func(bool, chan struct{})) {
 }
 
 func (c *Modal) Render() app.UI {
-	classes := "pf-c-modal-box pf-m-modal pf-m-sm"
+	classes := "pf-v5-c-modal-box pf-m-modal pf-m-sm"
 	if c.Class != "" {
 		classes += " " + c.Class
 	}
 
 	return app.Div().
-		Class("pf-c-backdrop").
+		Class("pf-v5-c-backdrop").
 		Body(
 			app.Div().
 				Class("pf-l-bullseye").
@@ -61,7 +61,7 @@ func (c *Modal) Render() app.UI {
 								app.Button().
 									Aria("disabled", "false").
 									Aria("label", "Close").
-									Class("pf-c-button pf-m-plain").
+									Class("pf-v5-c-button pf-m-plain").
 									Type("button").
 									OnClick(func(ctx app.Context, e app.Event) {
 										c.OnClose()
@@ -72,16 +72,16 @@ func (c *Modal) Render() app.UI {
 											Aria("hidden", true),
 									),
 								app.Header().
-									Class("pf-c-modal-box__header").
+									Class("pf-v5-c-modal-box__header").
 									Body(
 										app.H1().
 											ID(c.ID).
-											Class("pf-c-modal-box__title pf-m-icon").
+											Class("pf-v5-c-modal-box__title pf-m-icon").
 											Body(
 												app.If(
 													c.Icon != "",
 													app.Span().
-														Class("pf-c-modal-box__title-icon").
+														Class("pf-v5-c-modal-box__title-icon").
 														Body(
 															app.I().
 																Class(c.Icon),
@@ -91,17 +91,17 @@ func (c *Modal) Render() app.UI {
 													Class("pf-u-screen-reader").
 													Text(c.Title),
 												app.Span().
-													Class("pf-c-modal-box__title-text").
+													Class("pf-v5-c-modal-box__title-text").
 													Text(c.Title),
 											),
 									),
 								app.Div().
-									Class("pf-c-modal-box__body").
+									Class("pf-v5-c-modal-box__body").
 									Body(c.Body...),
 								app.If(
 									c.Footer != nil,
 									app.Footer().
-										Class("pf-c-modal-box__footer").
+										Class("pf-v5-c-modal-box__footer").
 										Body(c.Footer...),
 								),
 							),

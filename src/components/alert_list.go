@@ -16,7 +16,7 @@ func (l *AlertList) Render() app.UI {
 
 	app.Logf("Rendering AlertsList with %d alert(s).", len(keys))
 
-	return app.Ul().Class("pf-c-alert-group pf-m-toast").Body(
+	return app.Ul().Class("pf-v5-c-alert-group pf-m-toast").Body(
 		app.Range(keys).Slice(func(idx int) app.UI {
 			alertId := keys[idx]
 			val, ok := l.Alerts.Get(alertId)

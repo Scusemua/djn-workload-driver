@@ -18,9 +18,9 @@ build:
 
 depend:
 	find node_modules/@patternfly/patternfly/ -name "*.css" -type f -delete
-	rm -rf $(STATIC_DIR)/fonts
-	mkdir -p $(STATIC_DIR)
-	cp -r node_modules/@patternfly/patternfly/assets/fonts $(STATIC_DIR)
+	rm -rf $(STATIC_DIR)/assets/fonts 
+	mkdir -p $(STATIC_DIR)/assets 
+	cp -r node_modules/@patternfly/patternfly/assets/fonts $(STATIC_DIR)/assets/fonts
 
 build-docker:
 	sudo docker build --tag $(DOCKERUSER)/workload-driver:latest .

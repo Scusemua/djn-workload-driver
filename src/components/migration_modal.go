@@ -45,7 +45,7 @@ func (c *MigrationModal) Render() app.UI {
 		Title: fmt.Sprintf("Migrate kernel-%s-%d", c.Replica.KernelId, c.Replica.ReplicaId),
 		Body: []app.UI{
 			app.Form().
-				Class("pf-c-form").
+				Class("pf-v5-c-form").
 				ID(modal_id).
 				OnSubmit(func(ctx app.Context, e app.Event) {
 					e.PreventDefault()
@@ -54,19 +54,19 @@ func (c *MigrationModal) Render() app.UI {
 
 					c.clear()
 				}).Body(
-				app.Div().Class("pf-c-form__group").Body(
+				app.Div().Class("pf-v5-c-form__group").Body(
 					NewNodeList(c.WorkloadDriver, c.ErrorHandler, true, c.OnNodeSelected),
 				),
 			),
 		},
 		Footer: []app.UI{
 			app.Button().
-				Class("pf-c-button pf-m-primary").
+				Class("pf-v5-c-button pf-m-primary").
 				Type("submit").
 				Form("encrypt-and-sign-form").
 				Text("Migrate"),
 			app.Button().
-				Class("pf-c-button pf-m-link").
+				Class("pf-v5-c-button pf-m-link").
 				Type("button").
 				Text("Cancel").
 				OnClick(func(ctx app.Context, e app.Event) {
