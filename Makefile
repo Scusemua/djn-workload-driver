@@ -26,7 +26,7 @@ build-docker:
 	sudo docker build --tag $(DOCKERUSER)/workload-driver:latest .
 	sudo docker push $(DOCKERUSER)/workload-driver:latest 
 
-build-and-run: build-all run
+build-and-run: build-all run-local
 
-run: 
-	go run cmd/driver/main.go --config web/config.yaml
+run-local: 
+	go run cmd/driver/main.go --in-cluster=false --spoof-cluster=true 

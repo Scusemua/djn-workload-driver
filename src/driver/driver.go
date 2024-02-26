@@ -109,13 +109,12 @@ func (d *workloadDriverImpl) refreshNodes() {
 	app.Log("Refreshing nodes.")
 
 	if d.spoofGatewayConnection {
-		d.kernelProvider.RefreshKernels()
+		// TODO(Ben): Spoof nodes?
 
 		// Simulate some delay.
 		delay_ms := rand.Int31n(1500)
 
 		app.Logf("Sleeping for %d milliseconds.", delay_ms)
-
 		time.Sleep(time.Millisecond * time.Duration(delay_ms))
 	} else {
 		app.Log("Fetching nodes now.")
@@ -179,8 +178,8 @@ func (d *workloadDriverImpl) DialGatewayGRPC(gatewayAddress string) error {
 }
 
 // Return a list of currently-active kernels.
-func (d *workloadDriverImpl) Kernels() []*gateway.DistributedJupyterKernel {
-	return d.kernelProvider.Kernels()
+func (d *workloadDriverImpl) KernelsSlice() []*gateway.DistributedJupyterKernel {
+	return d.kernelProvider.KernelsSlice()
 }
 
 // Return a list of currently-active kernels.

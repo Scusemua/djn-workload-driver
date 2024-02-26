@@ -42,10 +42,12 @@ type WorkloadDriverOptions struct {
 
 type KernelProvider interface {
 	NumKernels() int32                                                      // Number of currently-active kernels.
-	Kernels() []*gateway.DistributedJupyterKernel                           // List of currently-active kernels.
+	KernelsSlice() []*gateway.DistributedJupyterKernel                      // List of currently-active kernels.
 	RefreshKernels()                                                        // Manually/explicitly refresh the set of active kernels from the Cluster Gateway.
 	Start()                                                                 // Start querying for kernels periodically.
 	DialGatewayGRPC(string) error                                           // Attempt to connect to the Cluster Gateway's gRPC server using the provided address. Returns an error if connection failed, or nil on success. This should NOT be called from the UI goroutine.
 	SubscribeToRefreshes(string, func([]*gateway.DistributedJupyterKernel)) // Subscribe to Kernel refreshes.
 	UnsubscribeFromRefreshes(string)                                        // Unsubscribe from Kernel refreshes.
+
+	// Kernels() *cmap.ConcurrentMap[string, *gateway.DistributedJupyterKernel] // Map from KernelID to *gateway.DistributedJupyterKernel of currently-active kernels.
 }

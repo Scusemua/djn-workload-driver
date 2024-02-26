@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/maxence-charriere/go-app/v9/pkg/app"
 	"github.com/scusemua/djn-workload-driver/m/v2/src/components"
 	"github.com/scusemua/djn-workload-driver/m/v2/src/config"
 	"github.com/scusemua/djn-workload-driver/m/v2/src/driver"
+	"github.com/scusemua/djn-workload-driver/m/v2/src/server"
 )
 
 func main() {
@@ -20,7 +22,9 @@ func main() {
 		}
 		driver := driver.NewWorkloadDriver(mainWindow, conf)
 		mainWindow.SetWorkloadDriver(driver)
-		driver.Start()
+		if app.IsClient { // The driver only needs to run client-side. Maybe it'll be server-side eventually.
+			driver.Start()
+		}
 		return mainWindow
 	})
 
@@ -44,8 +48,13 @@ func main() {
 	// required resources to make it work into a web browser. Here it is
 	// configured to handle requests with a path that starts with "/".
 	http.Handle("/", &app.Handler{
-		Name:        "WorkloadDriver",
-		Description: "Workload Driver for the Distributed Jupyter Notebook platform.",
+		Name:               "Workload Driver",
+		Title:              "Workload Driver",
+		ShortName:          "Wrkld Drvr",
+		LoadingLabel:       "Workload Driver for the Distributed Jupyter Notebook platform.",
+		Author:             "Benjamin Carver",
+		Description:        "Workload Driver for the Distributed Jupyter Notebook platform.",
+		AutoUpdateInterval: time.Millisecond * 250,
 		Styles: []string{
 			"/web/main.css",
 			"/web/css/docs.css",
@@ -53,7 +62,11 @@ func main() {
 		Icon: app.Icon{
 			SVG: "/web/icon.svg",
 		},
+		// Version: "0.0.1", // Auto-generated in order to trigger pwa update on a local development system.
 	})
+
+	// Used to transfer data from the frontend to the backend.
+	http.Handle("/api/", server.NewServerHttpHandler(conf))
 
 	fmt.Printf("WorkloadDriver HTTP server is starting now.")
 

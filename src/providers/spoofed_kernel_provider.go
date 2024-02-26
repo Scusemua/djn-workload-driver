@@ -64,7 +64,7 @@ func (p *SpoofedKernelProvider) spoofKernel() *gateway.DistributedJupyterKernel 
 
 // Called when spoofing kernels for the first time.
 func (p *SpoofedKernelProvider) spoofInitialKernels() {
-	numKernels := rand.Intn(16-2) + 2
+	numKernels := rand.Intn(8-2) + 2
 
 	for i := 0; i < numKernels; i++ {
 		kernel := p.spoofKernel()
@@ -96,7 +96,7 @@ func (p *SpoofedKernelProvider) spoofKernels() {
 		app.Logf("Adding %d new kernel(s) and removing up to %d existing kernel(s).", numToAdd, numToDelete)
 
 		if numToDelete > 0 {
-			currentKernels := p.Kernels()
+			currentKernels := p.KernelsSlice()
 			toDelete := make([]string, 0, numToDelete)
 
 			for i := 0; i < numToDelete; i++ {
