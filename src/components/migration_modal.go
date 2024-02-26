@@ -5,6 +5,7 @@ import (
 
 	"github.com/maxence-charriere/go-app/v9/pkg/app"
 	gateway "github.com/scusemua/djn-workload-driver/m/v2/api/proto"
+	"github.com/scusemua/djn-workload-driver/m/v2/src/domain"
 )
 
 type MigrationModal struct {
@@ -17,20 +18,23 @@ type MigrationModal struct {
 	Body        string // Body text of the modal
 	ActionLabel string // Text to display on the modal's primary action
 
-	OnCancel func(dirty bool, clear chan struct{})                        // Handler for when we cancel the migration operation.
-	OnClose  func()                                                       // Handler to call when closing/cancelling the modal
-	OnSubmit func(*gateway.JupyterKernelReplica, *gateway.KubernetesNode) // Handler to call when triggering the modal's primary action
+	OnCancel func(dirty bool, clear chan struct{})                       // Handler for when we cancel the migration operation.
+	OnClose  func()                                                      // Handler to call when closing/cancelling the modal
+	OnSubmit func(*gateway.JupyterKernelReplica, *domain.KubernetesNode) // Handler to call when triggering the modal's primary action
+
+	WorkloadDriver domain.WorkloadDriver
+	ErrorHandler   domain.ErrorHandler
 
 	// The replica we're migrating.
 	Replica *gateway.JupyterKernelReplica
-	Nodes   []*gateway.KubernetesNode
+	Nodes   []*domain.KubernetesNode
 
-	targetNode *gateway.KubernetesNode
+	targetNode *domain.KubernetesNode
 
 	dirty bool
 }
 
-func (c *MigrationModal) OnNodeSelected(selectedNode *gateway.KubernetesNode) {
+func (c *MigrationModal) OnNodeSelected(selectedNode *domain.KubernetesNode) {
 	c.targetNode = selectedNode
 }
 
@@ -51,12 +55,7 @@ func (c *MigrationModal) Render() app.UI {
 					c.clear()
 				}).Body(
 				app.Div().Class("pf-c-form__group").Body(
-					&NodeList{
-						RadioButtonsVisible: true,
-						Nodes:               c.Nodes,
-						OnNodeSelected:      c.OnNodeSelected,
-						selectedIdx:         -1,
-					},
+					NewNodeList(c.WorkloadDriver, c.ErrorHandler, true, c.OnNodeSelected),
 				),
 			),
 		},

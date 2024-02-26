@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/elliotchance/orderedmap/v2"
 	"github.com/maxence-charriere/go-app/v9/pkg/app"
 	"github.com/scusemua/djn-workload-driver/m/v2/src/components"
 	"github.com/scusemua/djn-workload-driver/m/v2/src/config"
@@ -19,12 +20,10 @@ func main() {
 	app.RouteFunc("/", func() app.Composer {
 		mainWindow := &components.MainWindow{
 			GatewayAddress: components.DefaultGatewayAddress,
+			Alerts:         orderedmap.NewOrderedMap[string, *components.Alert](),
 		}
 		driver := driver.NewWorkloadDriver(mainWindow, conf)
 		mainWindow.SetWorkloadDriver(driver)
-		if app.IsClient { // The driver only needs to run client-side. Maybe it'll be server-side eventually.
-			driver.Start()
-		}
 		return mainWindow
 	})
 
@@ -66,7 +65,7 @@ func main() {
 	})
 
 	// Used to transfer data from the frontend to the backend.
-	http.Handle("/api/", server.NewServerHttpHandler(conf))
+	http.Handle("/api/k8s-nodes", server.NewKubeNodeHttpHandler(conf))
 
 	fmt.Printf("WorkloadDriver HTTP server is starting now.")
 
