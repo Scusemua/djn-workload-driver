@@ -262,7 +262,7 @@ func (kl *KernelList) Render() app.UI {
 											),
 									),
 								// Expanded content.
-								app.Section().Class("pf-c-data-list__expandable-content").ID(fmt.Sprintf("content-%s", kernel_id)).Hidden(!kl.expanded[kernel_id]).Body(
+								app.Section().Style("max-height", kl.getMaxHeight(kernel_id)).Class("pf-c-data-list__expandable-content collapsed").ID(fmt.Sprintf("content-%s", kernel_id)).Body( // .Hidden(!kl.expanded[kernel_id])
 									app.Div().Class("pf-c-data-list__expandable-content-body pf-m-no-padding").Body(
 										app.Table().Class("pf-c-table pf-m-compact pf-m-grid-lg pf-m-no-border-rows").Body(
 											app.THead().Body(
@@ -294,4 +294,12 @@ func (kl *KernelList) Render() app.UI {
 							)
 					}),
 				))
+}
+
+func (kl *KernelList) getMaxHeight(kernel_id string) string {
+	if kl.expanded[kernel_id] {
+		return "250px"
+	} else {
+		return "0px"
+	}
 }

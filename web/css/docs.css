@@ -37,3 +37,14 @@
     align-items: center;
     justify-content: center;
 }
+
+.collapsed {
+    overflow: hidden;
+    transition: all .3s ease;
+    -ms-overflow-style: none;  /* Internet Explorer 10+ */
+    scrollbar-width: none;  /* Firefox */
+}
+
+.collapsed::-webkit-scrollbar {
+    display: none;  /* Safari and Chrome */
+}
