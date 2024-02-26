@@ -40,7 +40,7 @@ func (krr *KernelReplicaRow) Render() app.UI {
 			app.Span().Text(krr.Replica.GetNodeId()),
 		),
 		app.Td().Role("cell").Body(
-			app.Button().Class("pf-c-button pf-m-control pf-m-small").Type("button").Text("Migrate").OnClick(func(ctx app.Context, e app.Event) {
+			app.Button().Class("pf-v5-c-button pf-m-control pf-m-small").Type("button").Text("Migrate").OnClick(func(ctx app.Context, e app.Event) {
 				krr.onMigrateButtonClickedHandler(ctx, e, krr.Replica)
 			}, fmt.Sprintf("%p", krr.Replica)),
 		),

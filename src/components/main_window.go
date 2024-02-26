@@ -40,12 +40,12 @@ func (w *MainWindow) OnAppUpdate(ctx app.Context) {
 	w.addAlert(&Alert{
 		ID:            uuid.New().String(),
 		Name:          "Update Available",
-		Class:         "pf-c-alert pf-m-info",
+		Class:         "pf-v5-c-alert pf-m-info",
 		IconClass:     "fas fa-fw fa-info-circle",
 		Title:         "Update Available",
 		Description:   "There is a website update available.",
 		ButtonText:    "Update & Refresh",
-		ButtonClass:   "pf-c-button pf-m-primary update-button",
+		ButtonClass:   "pf-v5-c-button pf-m-primary update-button",
 		ButtonOnClick: w.onUpdateClick,
 		OnClose:       w.onAlertClosed,
 		HasButton:     true,
@@ -141,203 +141,187 @@ func (w *MainWindow) Render() app.UI {
 	// linkClass := "link heading fit unselectable"
 	return app.Div().Body(
 		app.Div().
-			Class("pf-c-page").
+			Class("pf-v5-c-page").
 			Body(
 				app.Main().
-					Class("pf-c-page__main").
+					Class("pf-v5-c-page__main").
 					ID("driver-main").
 					TabIndex(-1).
 					Body(
-						app.If(
-							!w.workloadDriver.ConnectedToGateway(),
-							app.Div().
-								Class("pf-c-empty-state").
-								Body(
-									app.Div().
-										Class("pf-c-empty-state__content").
-										Style("text-align", "center").
-										Body(
-											app.I().
-												// Class("pf-c-empty-state__icon").
-												Style("content", "url(\"/web/icons/cloud-disconnected.svg\")").
-												Style("color", "#203250").
-												Style("font-size", "136px").
-												Style("margin-bottom", "-16px").
-												Aria("hidden", true),
-											app.H1().
-												Class("pf-c-title pf-m-lg").
-												Style("font-weight", "bold").
-												Style("font-size", "24pt").
-												Style("margin-bottom", "-8px").
-												Text("Disconnected"),
+						app.Section().Class("pf-v5-c-page__main-section").Body(
+							app.Div().Class("pf-v5-c-page__main-body").Body(
+								app.Div().Class("pf-v5-c-content").Body(
+									app.If(
+										!w.workloadDriver.ConnectedToGateway(),
+										app.Div().
+											Class("pf-v5-c-empty-state").
+											Body(
+												app.Div().
+													Class("pf-v5-c-empty-state__content").
+													Style("text-align", "center").
+													Body(
+														app.I().
+															// Class("pf-v5-c-empty-state__icon").
+															Style("content", "url(\"/web/icons/cloud-disconnected.svg\")").
+															Style("color", "#203250").
+															Style("font-size", "136px").
+															Style("margin-bottom", "-16px").
+															Aria("hidden", true),
+														app.H1().
+															Class("pf-v5-c-title pf-m-lg").
+															Style("font-weight", "bold").
+															Style("font-size", "24pt").
+															Style("margin-bottom", "-8px").
+															Text("Disconnected"),
+														app.Div().
+															Class("pf-v5-c-empty-state__body").
+															Text("To start, please enter the IP address and port of the Cluster Gateway gRPC server and press Connect."),
+														app.Div().Class("pf-v5-c-form").Body(
+															app.Div().
+																Class("pf-v5-c-form__group").
+																Body(
+																	app.Div().
+																		Class("pf-v5-c-form__group").
+																		Style("margin-bottom", "2px").
+																		Body(
+																			app.Label().
+																				Class("pf-v5-c-form__label").
+																				For("gateway-address-input").
+																				Body(
+																					app.Span().
+																						Class("pf-v5-c-form__label-text").
+																						Text("Gateway Address"),
+																					app.Span().
+																						Class("pf-v5-c-form__label-required").
+																						Aria("hidden", true).
+																						Text("*"),
+																				),
+																		),
+																	app.Div().
+																		Class("pf-v5-c-form__group-control").
+																		Body(
+																			app.Input().
+																				Class("pf-v5-c-form-control").
+																				Type("text").
+																				Placeholder(DefaultGatewayAddress).
+																				ID("gateway-address-input").
+																				Required(true).
+																				OnInput(func(ctx app.Context, e app.Event) {
+																					address := ctx.JSSrc().Get("value").String()
+
+																					if address != "" {
+																						w.GatewayAddress = address
+																					} else {
+																						w.GatewayAddress = DefaultGatewayAddress
+																					}
+																				}),
+																		),
+																)),
+														app.Button().
+															Class("pf-v5-c-button pf-m-primary").
+															Type("button").
+															Text("Connect").
+															Style("font-size", "16px").
+															OnClick(func(ctx app.Context, e app.Event) {
+																if w.GatewayAddress == "" {
+																	w.HandleError(domain.ErrEmptyGatewayAddr, "Cluster Gateway IP address cannot be the empty string.")
+																} else {
+																	// w.logger.Info(fmt.Sprintf("Connect clicked! Attempting to connect to Gateway (via gRPC) at %s now...", w.GatewayAddress))
+																	app.Logf("Connect clicked! Attempting to connect to Gateway (via gRPC) at %s now...", w.GatewayAddress)
+																	go w.connectButtonHandler()
+																}
+															}),
+													),
+											)).
+										Else(app.Div().Body(
 											app.Div().
-												Class("pf-c-empty-state__body").
-												Text("To start, please enter the IP address and port of the Cluster Gateway gRPC server and press Connect."),
-											app.Div().
-												Class("pf-c-form__group").
+												Class("pf-v5-c-empty-state").
 												Body(
 													app.Div().
-														Class("pf-c-form__group").
-														Style("margin-bottom", "2px").
+														Class("pf-v5-c-empty-state__content").
 														Body(
-															app.Label().
-																Class("pf-c-form__label").
-																For("gateway-address-input").
-																Body(
-																	app.Span().
-																		Class("pf-c-form__label-text").
-																		Text("Gateway Address"),
-																	app.Span().
-																		Class("pf-c-form__label-required").
-																		Aria("hidden", true).
-																		Text("*"),
-																),
-														),
-													app.Div().
-														Class("pf-c-form__group-control").
-														Body(
-															app.Input().
-																Class("pf-c-form-control").
-																Type("text").
-																Placeholder(DefaultGatewayAddress).
-																ID("gateway-address-input").
-																Required(true).
-																OnInput(func(ctx app.Context, e app.Event) {
-																	address := ctx.JSSrc().Get("value").String()
-
-																	if address != "" {
-																		w.GatewayAddress = address
-																	} else {
-																		w.GatewayAddress = DefaultGatewayAddress
-																	}
-																}),
-														),
-												),
-											app.Button().
-												Class("pf-c-button pf-m-primary").
-												Type("button").
-												Text("Connect").
-												Style("font-size", "16px").
-												OnClick(func(ctx app.Context, e app.Event) {
-													if w.GatewayAddress == "" {
-														w.HandleError(domain.ErrEmptyGatewayAddr, "Cluster Gateway IP address cannot be the empty string.")
-													} else {
-														// w.logger.Info(fmt.Sprintf("Connect clicked! Attempting to connect to Gateway (via gRPC) at %s now...", w.GatewayAddress))
-														app.Logf("Connect clicked! Attempting to connect to Gateway (via gRPC) at %s now...", w.GatewayAddress)
-														go w.connectButtonHandler()
-													}
-												}),
-										),
-								)).
-							Else(
-								app.Div().
-									Class("pf-c-empty-state").
-									Body(
-										app.Div().
-											Class("pf-c-empty-state__content").
-											Body(
-												app.I().
-													Style("content", "url(\"/web/icons/cloud-connected.svg\")").
-													Style("color", "#203250").
-													Style("font-size", "136px").
-													Style("margin-bottom", "-16px").
-													Aria("hidden", true),
-												app.H1().
-													Class("pf-c-title pf-m-lg").
-													Style("font-weight", "bold").
-													Style("font-size", "24pt").
-													Style("margin-bottom", "-8px").
-													Text("Connected"),
-												app.H1().
-													Class("pf-c-title pf-m-lg").
-													Style("font-weight", "lighter").
-													Style("font-size", "16pt").
-													Style("margin-bottom", "-8px").
-													Text(fmt.Sprintf("Cluster Gateway: %s", w.workloadDriver.GatewayAddress())),
-												app.Br(),
-												app.Div().
-													Body(
-														app.Div().Body(
+															app.I().
+																Style("content", "url(\"/web/icons/cloud-connected.svg\")").
+																Style("color", "#203250").
+																Style("font-size", "136px").
+																Style("margin-bottom", "-16px").
+																Aria("hidden", true),
+															app.H1().
+																Class("pf-v5-c-title pf-m-lg").
+																Style("font-weight", "bold").
+																Style("font-size", "24pt").
+																Style("margin-bottom", "-8px").
+																Text("Connected"),
+															app.H1().
+																Class("pf-v5-c-title pf-m-lg").
+																Style("font-weight", "lighter").
+																Style("font-size", "16pt").
+																Style("margin-bottom", "-8px").
+																Text(fmt.Sprintf("Cluster Gateway: %s", w.workloadDriver.GatewayAddress())),
+															app.Br(),
 															app.Div().
-																Style("padding", "4px 4px 2px 2px").
-																Style("margin-bottom", "8px").
 																Body(
-																	app.Button().
-																		Class("pf-c-button pf-m-primary").
-																		Type("button").
-																		Text("Refresh Kernels").
-																		Style("font-size", "16px").
-																		Style("margin-right", "16px").
-																		OnClick(func(ctx app.Context, e app.Event) {
-																			e.StopImmediatePropagation()
-																			app.Log("Refreshing kernels in kernel list.")
+																	app.Div().Body(
+																		app.Div().
+																			Style("padding", "4px 4px 2px 2px").
+																			Style("margin-bottom", "8px").
+																			Body(
+																				app.Button().
+																					Class("pf-v5-c-button pf-m-primary").
+																					Type("button").
+																					Text("Refresh Kernels").
+																					Style("font-size", "16px").
+																					Style("margin-right", "16px").
+																					OnClick(func(ctx app.Context, e app.Event) {
+																						e.StopImmediatePropagation()
+																						app.Log("Refreshing kernels in kernel list.")
 
-																			go w.workloadDriver.KernelProvider().RefreshResources()
-																		}),
-																	app.Button().
-																		Class("pf-c-button pf-m-secondary").
-																		Type("button").
-																		Text("Refresh Nodes").
-																		Style("font-size", "16px").
-																		Style("margin-right", "16px").
-																		OnClick(func(ctx app.Context, e app.Event) {
-																			e.StopImmediatePropagation()
-																			app.Log("Refreshing nodes in node list.")
+																						go w.workloadDriver.KernelProvider().RefreshResources()
+																					}),
+																				app.Button().
+																					Class("pf-v5-c-button pf-m-secondary").
+																					Type("button").
+																					Text("Refresh Nodes").
+																					Style("font-size", "16px").
+																					Style("margin-right", "16px").
+																					OnClick(func(ctx app.Context, e app.Event) {
+																						e.StopImmediatePropagation()
+																						app.Log("Refreshing nodes in node list.")
 
-																			go w.workloadDriver.NodeProvider().RefreshResources()
-																		}),
-																	app.Button().
-																		Class("pf-c-button pf-m-primary pf-m-danger").
-																		Type("button").
-																		Text("Terminate Selected Kernels").
-																		Style("font-size", "16px").
-																		OnClick(func(ctx app.Context, e app.Event) {
-																			e.StopImmediatePropagation()
+																						go w.workloadDriver.NodeProvider().RefreshResources()
+																					}),
+																				app.Button().
+																					Class("pf-v5-c-button pf-m-primary pf-m-danger").
+																					Type("button").
+																					Text("Terminate Selected Kernels").
+																					Style("font-size", "16px").
+																					OnClick(func(ctx app.Context, e app.Event) {
+																						e.StopImmediatePropagation()
 
-																			// kernelsToTerminate := make([]*gateway.DistributedJupyterKernel, 0, len(kernels))
+																						// kernelsToTerminate := make([]*gateway.DistributedJupyterKernel, 0, len(kernels))
 
-																			// for kernel_id, selected := range kl.selected {
-																			// 	if selected {
-																			// 		app.Logf("Kernel %s is selected. Will be terminating it.", kernel_id)
-																			// 		kernelsToTerminate = append(kernelsToTerminate, kernels[kernel_id])
-																			// 	}
-																			// }
+																						// for kernel_id, selected := range kl.selected {
+																						// 	if selected {
+																						// 		app.Logf("Kernel %s is selected. Will be terminating it.", kernel_id)
+																						// 		kernelsToTerminate = append(kernelsToTerminate, kernels[kernel_id])
+																						// 	}
+																						// }
 
-																			// app.Logf("Terminating %d kernels now.", len(kernelsToTerminate))
-																		}),
-																),
-														),
-														app.Div().Body(
-															NewKernelList(w.workloadDriver, w, w.onMigrateButtonClicked),
-															NewNodeList(w.workloadDriver, w, false, func(kn *domain.KubernetesNode) { /* Do nothing */ }),
-														),
-													),
+																						// app.Logf("Terminating %d kernels now.", len(kernelsToTerminate))
+																					}),
+																			),
+																	)),
+														)),
+											app.Div().Class("pf-v5-l-grid pf-m-gutter").Body(
+												app.Div().Class("pf-v5-l-grid__item pf-m-gutter pf-m-4-col-on-lg pf-m-3-col-on-2xl").Body(
+													NewKernelList(w.workloadDriver, w, w.onMigrateButtonClicked),
+												),
+												app.Div().Class("pf-v5-l-grid__item pf-m-gutter pf-m-4-col-on-lg pf-m-6-col-on-2xl").Body(
+													NewNodeList(w.workloadDriver, w, false, func(kn *domain.KubernetesNode) { /* Do nothing */ }),
+												),
 											)),
-							),
-					// app.If(w.updateAvailable,
-					// 	// Update available notification.
-					// 	app.Div().Class("pf-v5-c-alert pf-m-info").Aria("aria-label", "Information alert").Body(
-					// 		app.Div().Class("pf-v5-c-alert__icon").Body(
-					// 			app.I().Class("fas fa-fw fa-info-circle"),
-					// 		),
-					// 		app.P().Class("pf-v5-c-alert__title").Text("Update Available").Body(
-					// 			app.Span().Class("pf-v5-screen-reader").Text("Info alert:"),
-					// 		),
-					// 		app.Div().Class("pf-v5-c-alert__action").Body(
-					// 			app.Button().Class("pf-c-button pf-m-plain").Type("button").Body(
-					// 				app.I().Class("fas fa-times"),
-					// 			),
-					// 		),
-					// 		app.Div().Class("pf-v5-c-alert__description").Body(
-					// 			app.P().Text("There is a website update available. Would you like to install the update and reload the webpage?"),
-					// 		),
-					// 		app.Button().
-					// 			Class("pf-c-button pf-m-primary update-button").
-					// 			Type("button").
-					// 			Text("Update & Refresh").
-					// 			OnClick(w.onUpdateClick),
-					// 	),
-					// )
+										),
+								))),
 					),
 				app.Section().
 					Class("").

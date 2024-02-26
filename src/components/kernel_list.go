@@ -121,143 +121,150 @@ func (kl *KernelList) Render() app.UI {
 	// app.Logf("\n[%p] Rendering KernelList with %d kernels.", kl, len(kernels))
 
 	return app.Div().
+		Class("pf-v5-c-card pf-m-expanded").
 		Body(
-			app.Div().Class("pf-c-data-list pf-m-grid-md").
-				Aria("label", "Kernel list").
-				ID(keyListID).
-				Body(
-					app.Range(kernels).Map(func(kernel_id string) app.UI {
-						return app.Li().
-							Class("pf-c-data-list__item").
-							Body(
-								app.Div().
-									Class("pf-c-data-list__item-row").
-									Body(
-										app.Div().
-											Class("pf-c-data-list__item-control").
-											Body(
-												app.Div().Class("pf-c-data-list__toggle").Body(
-													app.Button().Class("pf-c-button pf-m-plain").Type("button").ID(fmt.Sprintf("expand-button-kernel-%s", kernel_id)).Body(
-														app.Div().Class("pf-c-data-list__toggle-icon").Body(
-															app.If(kl.expanded[kernel_id], app.I().ID(fmt.Sprintf("expand-icon-kernel-%s", kernel_id)).Class("fas fa-angle-down")).
-																Else(app.I().ID(fmt.Sprintf("expand-icon-kernel-%s", kernel_id)).Class("fas fa-angle-right")),
-														),
-													).OnClick(func(ctx app.Context, e app.Event) {
-														// If there's no entry yet, then we default to false, and since we clicked the expand button, we set it to true now.
-														if _, ok := kl.expanded[kernel_id]; !ok {
-															kl.expanded[kernel_id] = true
+			app.Div().Class("pf-v5-c-card__header").Body(
+				app.Div().Class("pf-v5-c-card__title").Body(
+					app.H2().Class("pf-v5-c-title pf-m-xl").Text("Active Kernels"),
+				),
+			),
+			app.Div().Class("pf-v5-c-card__body").Body(
+				app.Div().Class("pf-v5-c-data-list pf-m-grid-md").
+					Aria("label", "Kernel list").
+					ID(keyListID).
+					Body(
+						app.Range(kernels).Map(func(kernel_id string) app.UI {
+							return app.Li().
+								Class("pf-v5-c-data-list__item").
+								Body(
+									app.Div().
+										Class("pf-v5-c-data-list__item-row").
+										Body(
+											app.Div().
+												Class("pf-v5-c-data-list__item-control").
+												Body(
+													app.Div().Class("pf-v5-c-data-list__toggle").Body(
+														app.Button().Class("pf-v5-c-button pf-m-plain").Type("button").ID(fmt.Sprintf("expand-button-kernel-%s", kernel_id)).Body(
+															app.Div().Class("pf-v5-c-data-list__toggle-icon").Body(
+																app.If(kl.expanded[kernel_id], app.I().ID(fmt.Sprintf("expand-icon-kernel-%s", kernel_id)).Class("fas fa-angle-down")).
+																	Else(app.I().ID(fmt.Sprintf("expand-icon-kernel-%s", kernel_id)).Class("fas fa-angle-right")),
+															),
+														).OnClick(func(ctx app.Context, e app.Event) {
+															// If there's no entry yet, then we default to false, and since we clicked the expand button, we set it to true now.
+															if _, ok := kl.expanded[kernel_id]; !ok {
+																kl.expanded[kernel_id] = true
 
-															app.Logf("Kernel %s should be expanded now.", kernel_id)
-														} else {
-															kl.expanded[kernel_id] = !kl.expanded[kernel_id]
-
-															if kl.expanded[kernel_id] {
 																app.Logf("Kernel %s should be expanded now.", kernel_id)
 															} else {
-																app.Logf("Kernel %s should be collapsed now.", kernel_id)
+																kl.expanded[kernel_id] = !kl.expanded[kernel_id]
+
+																if kl.expanded[kernel_id] {
+																	app.Logf("Kernel %s should be expanded now.", kernel_id)
+																} else {
+																	app.Logf("Kernel %s should be collapsed now.", kernel_id)
+																}
 															}
-														}
 
-														// jsObject := app.Window().GetElementByID(fmt.Sprintf("expand-icon-kernel-%s", kernel_id)).JSValue()
-														// if jsObject != nil && !jsObject.IsNull() {
-														// 	classListJS := jsObject.Get("classList")
+															// jsObject := app.Window().GetElementByID(fmt.Sprintf("expand-icon-kernel-%s", kernel_id)).JSValue()
+															// if jsObject != nil && !jsObject.IsNull() {
+															// 	classListJS := jsObject.Get("classList")
 
-														// 	if kl.expanded[kernel_id] {
-														// 		// It's expanded.
-														// 		// Change the icon to be pointing down instead of to the right.
-														// 		classListJS.Call("remove", "fa-angle-right")
-														// 		classListJS.Call("add", "fa-angle-down")
-														// 	} else {
-														// 		// It's collapsed.
-														// 		// Change the icon to be pointing to the right instead of down.
-														// 		classListJS.Call("remove", "fa-angle-down")
-														// 		classListJS.Call("add", "fa-angle-right")
-														// 	}
-														// }
+															// 	if kl.expanded[kernel_id] {
+															// 		// It's expanded.
+															// 		// Change the icon to be pointing down instead of to the right.
+															// 		classListJS.Call("remove", "fa-angle-right")
+															// 		classListJS.Call("add", "fa-angle-down")
+															// 	} else {
+															// 		// It's collapsed.
+															// 		// Change the icon to be pointing to the right instead of down.
+															// 		classListJS.Call("remove", "fa-angle-down")
+															// 		classListJS.Call("add", "fa-angle-right")
+															// 	}
+															// }
 
-														kl.Update()
-													}, kernel_id),
+															kl.Update()
+														}, kernel_id),
+													),
+													app.Div().Class("pf-v5-c-data-list__check").Body(
+														app.Input().Type("checkbox").Name(fmt.Sprintf("check-expandable-kernel-%s", kernel_id)).OnInput(func(ctx app.Context, e app.Event) {
+															kl.selected[kernel_id] = !kl.selected[kernel_id]
+
+															if kl.selected[kernel_id] {
+																app.Logf("Kernel %s should be selected now.", kernel_id)
+															} else {
+																app.Logf("Kernel %s should be deselected now.", kernel_id)
+															}
+														}),
+													),
 												),
-												app.Div().Class("pf-c-data-list__check").Body(
-													app.Input().Type("checkbox").Name(fmt.Sprintf("check-expandable-kernel-%s", kernel_id)).OnInput(func(ctx app.Context, e app.Event) {
-														kl.selected[kernel_id] = !kl.selected[kernel_id]
-
-														if kl.selected[kernel_id] {
-															app.Logf("Kernel %s should be selected now.", kernel_id)
-														} else {
-															app.Logf("Kernel %s should be deselected now.", kernel_id)
-														}
-													}),
+											app.Div().
+												Class("pf-v5-c-data-list__item-content").
+												Body(
+													app.Div().
+														Class("pf-v5-c-data-list__cell pf-m-align-left").
+														Body(
+															app.Div().
+																Class("pf-l-flex pf-m-column pf-m-space-items-none").
+																Body(
+																	app.Div().
+																		Class("pf-l-flex pf-m-column").
+																		Body(
+																			app.P().
+																				Text("Kernel "+kernel_id).
+																				Style("font-weight", "bold").
+																				Style("font-size", "16px"),
+																		),
+																),
+															app.Div().
+																Class("pf-l-flex pf-m-wrap").
+																Body(
+																	NewKernelReplicasLabel(kernels[kernel_id].GetNumReplicas(), 16),
+																	NewKernelStatusLabel(kernels[kernel_id].GetStatus(), 16)),
+														),
+													app.Div().
+														Class("pf-v5-c-data-list__cell pf-m-align-right pf-m-no-fill").
+														Body(
+															app.Button().
+																Class("pf-v5-c-button pf-m-secondary pf-m-danger").
+																Type("button").
+																Text("Terminate").
+																Style("font-size", "16px"),
+														),
 												),
-											),
-										app.Div().
-											Class("pf-c-data-list__item-content").
-											Body(
-												app.Div().
-													Class("pf-c-data-list__cell pf-m-align-left").
-													Body(
-														app.Div().
-															Class("pf-l-flex pf-m-column pf-m-space-items-none").
-															Body(
-																app.Div().
-																	Class("pf-l-flex pf-m-column").
-																	Body(
-																		app.P().
-																			Text("Kernel "+kernel_id).
-																			Style("font-weight", "bold").
-																			Style("font-size", "16px"),
-																	),
-															),
-														app.Div().
-															Class("pf-l-flex pf-m-wrap").
-															Body(
-																NewKernelReplicasLabel(kernels[kernel_id].GetNumReplicas(), 16),
-																NewKernelStatusLabel(kernels[kernel_id].GetStatus(), 16)),
+										),
+									// Expanded content.
+									app.Section().Style("max-height", kl.getMaxHeight(kernel_id)).Class("pf-v5-c-data-list__expandable-content collapsed").ID(fmt.Sprintf("content-%s", kernel_id)).Body( // .Hidden(!kl.expanded[kernel_id])
+										app.Div().Class("pf-v5-c-data-list__expandable-content-body").Body(
+											app.Table().Class("pf-v5-c-table pf-m-compact pf-m-grid-lg pf-m-no-border-rows").Body(
+												app.THead().Body(
+													app.Tr().Role("row").Body(
+														// app.Td().Class("pf-v5-c-table__check").Role("cell").Body(
+														// 	app.Input().Type("checkbox").Name("check-all"),
+														// ),
+														app.Th().Class("pf-v5-c-table__th").Role("columnheader").Scope("col").Body(
+															app.P().Text("Replica"),
+														),
+														app.Th().Class("pf-v5-c-table__th").Role("columnheader").Scope("col").Body(
+															app.P().Text("Pod"),
+														),
+														app.Th().Class("pf-v5-c-table__th").Role("columnheader").Scope("col").Body(
+															app.P().Text("Node"),
+														),
+														app.Td().Class("pf-v5-c-table__td"),
 													),
-												app.Div().
-													Class("pf-c-data-list__cell pf-m-align-right pf-m-no-fill").
-													Body(
-														app.Button().
-															Class("pf-c-button pf-m-secondary pf-m-danger").
-															Type("button").
-															Text("Terminate").
-															Style("font-size", "16px"),
-													),
-											),
-									),
-								// Expanded content.
-								app.Section().Style("max-height", kl.getMaxHeight(kernel_id)).Class("pf-c-data-list__expandable-content collapsed").ID(fmt.Sprintf("content-%s", kernel_id)).Body( // .Hidden(!kl.expanded[kernel_id])
-									app.Div().Class("pf-c-data-list__expandable-content-body pf-m-no-padding").Body(
-										app.Table().Class("pf-c-table pf-m-compact pf-m-grid-lg pf-m-no-border-rows").Body(
-											app.THead().Body(
-												app.Tr().Role("row").Body(
-													// app.Td().Class("pf-c-table__check").Role("cell").Body(
-													// 	app.Input().Type("checkbox").Name("check-all"),
-													// ),
-													app.Th().Role("columnheader").Scope("col").Body(
-														app.P().Text("Replica"),
-													),
-													app.Th().Role("columnheader").Scope("col").Body(
-														app.P().Text("Pod"),
-													),
-													app.Th().Role("columnheader").Scope("col").Body(
-														app.P().Text("Node"),
-													),
-													app.Td(),
 												),
-											),
-											app.TBody().Role("rowgroup").Body(
-												app.Range(kernels[kernel_id].GetReplicas()).Slice(func(j int) app.UI {
-													return NewKernelReplicaRow(kernels[kernel_id].GetReplicas()[j], kl.onMigrateButtonClicked, kl.workloadDriver, kl.errorHandler)
-												},
+												app.TBody().Role("rowgroup").Body(
+													app.Range(kernels[kernel_id].GetReplicas()).Slice(func(j int) app.UI {
+														return NewKernelReplicaRow(kernels[kernel_id].GetReplicas()[j], kl.onMigrateButtonClicked, kl.workloadDriver, kl.errorHandler)
+													},
+													),
 												),
 											),
 										),
 									),
-								),
-							)
-					}),
-				))
+								)
+						}),
+					)))
 }
 
 func (kl *KernelList) getMaxHeight(kernel_id string) string {

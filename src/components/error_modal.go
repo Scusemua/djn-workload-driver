@@ -35,17 +35,17 @@ func (c *ErrorModal) Render() app.UI {
 				),
 			app.Text("Error details:"),
 			app.Div().
-				Class("pf-c-code-editor pf-m-read-only pf-u-mt-lg").
+				Class("pf-v5-c-code-editor pf-m-read-only pf-u-mt-lg").
 				Body(
 					app.Div().
-						Class("pf-c-code-editor__main").
+						Class("pf-v5-c-code-editor__main").
 						Body(
 							app.Textarea().
 								Rows(len(strings.Split(c.Error.Error(), "\n"))).
 								Style("width", "100%").
 								Style("resize", "vertical").
 								Style("border", "0").
-								Class("pf-c-form-control").
+								Class("pf-v5-c-form-control").
 								ReadOnly(true).
 								Text(c.Error.Error()),
 						),
@@ -54,7 +54,7 @@ func (c *ErrorModal) Render() app.UI {
 		Footer: []app.UI{
 			app.Button().
 				Aria("disabled", "false").
-				Class("pf-c-button pf-m-primary").
+				Class("pf-v5-c-button pf-m-primary").
 				Type("button").
 				Text(c.ActionLabel).
 				OnClick(func(ctx app.Context, e app.Event) {

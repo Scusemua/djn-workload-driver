@@ -6,7 +6,7 @@
     "scripts": {},
     "author": "Ben Carver",
     "dependencies": {
-      "@patternfly/patternfly": "^4.217.1"
+      "@patternfly/patternfly": "^5"
     },
     "devDependencies": {
       "sass": "^1.55.0"
