@@ -96,7 +96,7 @@ func (p *SpoofedKernelProvider) spoofKernels() {
 		app.Logf("Adding %d new kernel(s) and removing up to %d existing kernel(s).", numToAdd, numToDelete)
 
 		if numToDelete > 0 {
-			currentKernels := p.KernelsSlice()
+			currentKernels := p.Resources()
 			toDelete := make([]string, 0, numToDelete)
 
 			for i := 0; i < numToDelete; i++ {
@@ -134,13 +134,14 @@ func (p *SpoofedKernelProvider) spoofKernels() {
 // This must not be called from the UI goroutine.
 // This MUST be called with the p.refreshKernelMutex held.
 // It is the caller's responsibility to release the lock afterwards.
-func (p *SpoofedKernelProvider) RefreshKernels() {
+func (p *SpoofedKernelProvider) RefreshResources() {
 	locked := p.refreshKernelMutex.TryLock()
 	if !locked {
 		// If we did not acquire the lock, then there's already an active refresh occurring. We'll just return.
 		app.Log("There is already an active spoofed refresh operation being performed. Please wait for it to complete.")
 		return
 	}
+	defer p.refreshKernelMutex.Unlock()
 
 	app.Log("Refreshing kernels.")
 
@@ -154,6 +155,4 @@ func (p *SpoofedKernelProvider) RefreshKernels() {
 	time.Sleep(time.Millisecond * time.Duration(delay_ms))
 
 	p.refreshOccurred()
-
-	p.refreshKernelMutex.Unlock()
 }

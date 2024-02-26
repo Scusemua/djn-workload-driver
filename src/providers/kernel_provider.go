@@ -86,8 +86,17 @@ func (p *BaseKernelProvider) DialGatewayGRPC(gatewayAddress string) error {
 	return nil
 }
 
-func (p *BaseKernelProvider) Start() {
+func (p *BaseKernelProvider) Start(addr string) error {
+	err := p.KernelProvider.DialGatewayGRPC(addr)
+	if err != nil {
+		return err
+	}
+
+	p.gatewayAddress = addr
+
 	go p.queryKernels()
+
+	return nil
 }
 
 // Periodically query the Gateway for an update of the current active kernels.
@@ -112,7 +121,7 @@ func (p *BaseKernelProvider) queryKernels() {
 				return
 			}
 
-			p.KernelProvider.RefreshKernels()
+			p.KernelProvider.RefreshResources()
 		case <-p.quitKernelQueryChannel:
 			app.Log("Ceasing kernel queries to Gateway.")
 			return
@@ -120,12 +129,12 @@ func (p *BaseKernelProvider) queryKernels() {
 	}
 }
 
-func (p *BaseKernelProvider) NumKernels() int32 {
+func (p *BaseKernelProvider) Count() int32 {
 	return int32(p.kernels.Count())
 }
 
-func (p *BaseKernelProvider) KernelsSlice() []*gateway.DistributedJupyterKernel {
-	kernels := make([]*gateway.DistributedJupyterKernel, 0, p.NumKernels())
+func (p *BaseKernelProvider) Resources() []*gateway.DistributedJupyterKernel {
+	kernels := make([]*gateway.DistributedJupyterKernel, 0, p.Count())
 
 	for kvPair := range p.kernels.IterBuffered() {
 		kernels = append(kernels, kvPair.Val)
@@ -143,13 +152,14 @@ func (p *BaseKernelProvider) Kernels() *cmap.ConcurrentMap[string, *gateway.Dist
 // This must not be called from the UI goroutine.
 // This MUST be called with the p.refreshKernelMutex help.
 // It is the caller's responsibility to release the lock afterwards.
-func (p *BaseKernelProvider) RefreshKernels() {
+func (p *BaseKernelProvider) RefreshResources() {
 	locked := p.refreshKernelMutex.TryLock()
 	if !locked {
 		// If we did not acquire the lock, then there's already an active refresh occurring. We'll just return.
 		app.Log("There is already an active refresh operation being performep. Please wait for it to complete.")
 		return
 	}
+	defer p.refreshKernelMutex.Unlock()
 
 	app.Log("Kernel Querier is refreshing kernels now.")
 	resp, err := p.rpcClient.ListKernels(context.TODO(), &gateway.Void{})
@@ -165,13 +175,11 @@ func (p *BaseKernelProvider) RefreshKernels() {
 	}
 
 	p.refreshOccurred()
-
-	p.refreshKernelMutex.Unlock()
 }
 
 func (p *BaseKernelProvider) refreshOccurred() {
 	p.lastKernelRefresh = time.Now()
-	kernels := p.KernelsSlice()
+	kernels := p.Resources()
 
 	for kv := range p.subscribers.IterBuffered() {
 		handler := kv.Val

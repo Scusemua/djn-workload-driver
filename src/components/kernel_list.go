@@ -38,7 +38,7 @@ func NewKernelList(workloadDriver domain.WorkloadDriver, errorHandler domain.Err
 		selected: make(map[string]bool),
 	}
 
-	kl.recreateState(workloadDriver.KernelsSlice())
+	kl.recreateState(workloadDriver.KernelProvider().Resources())
 
 	// app.Logf("Created new KL: %s. Number of kernels: %d.", kl.id, len(kl.Kernels))
 
@@ -105,13 +105,13 @@ func (kl *KernelList) handleKernelsRefresh(kernels []*gateway.DistributedJupyter
 }
 
 func (kl *KernelList) OnMount(ctx app.Context) {
-	kl.workloadDriver.SubscribeToRefreshes(kl.id, kl.handleKernelsRefresh)
+	kl.workloadDriver.KernelProvider().SubscribeToRefreshes(kl.id, kl.handleKernelsRefresh)
 
-	go kl.workloadDriver.RefreshKernels()
+	go kl.workloadDriver.KernelProvider().RefreshResources()
 }
 
 func (kl *KernelList) OnDismount(ctx app.Context) {
-	kl.workloadDriver.UnsubscribeFromRefreshes(kl.id)
+	kl.workloadDriver.KernelProvider().UnsubscribeFromRefreshes(kl.id)
 }
 
 func (kl *KernelList) Render() app.UI {
@@ -122,42 +122,6 @@ func (kl *KernelList) Render() app.UI {
 
 	return app.Div().
 		Body(
-			app.Div().
-				Style("padding", "4px 4px 2px 2px").
-				Style("margin-bottom", "8px").
-				Body(
-					app.Button().
-						Class("pf-c-button pf-m-primary").
-						Type("button").
-						Text("Refresh Kernels").
-						Style("font-size", "16px").
-						Style("margin-right", "16px").
-						OnClick(func(ctx app.Context, e app.Event) {
-							e.StopImmediatePropagation()
-							app.Log("Refreshing kernels in kernel list.")
-
-							go kl.workloadDriver.RefreshKernels()
-						}),
-					app.Button().
-						Class("pf-c-button pf-m-primary pf-m-danger").
-						Type("button").
-						Text("Terminate Selected Kernels").
-						Style("font-size", "16px").
-						OnClick(func(ctx app.Context, e app.Event) {
-							e.StopImmediatePropagation()
-
-							kernelsToTerminate := make([]*gateway.DistributedJupyterKernel, 0, len(kernels))
-
-							for kernel_id, selected := range kl.selected {
-								if selected {
-									app.Logf("Kernel %s is selected. Will be terminating it.", kernel_id)
-									kernelsToTerminate = append(kernelsToTerminate, kernels[kernel_id])
-								}
-							}
-
-							app.Logf("Terminating %d kernels now.", len(kernelsToTerminate))
-						}),
-				),
 			app.Div().Class("pf-c-data-list pf-m-grid-md").
 				Aria("label", "Kernel list").
 				ID(keyListID).

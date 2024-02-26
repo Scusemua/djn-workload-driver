@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"encoding/json"
 	"errors"
 
 	gateway "github.com/scusemua/djn-workload-driver/m/v2/api/proto"
@@ -19,35 +20,61 @@ type ErrorHandler interface {
 }
 
 type WorkloadDriver interface {
-	KernelProvider
-
-	// Start the WorkloadDriver
-	Start()
-
 	// Return true if we're connected to the Cluster Gateway.
 	ConnectedToGateway() bool
+
+	KernelProvider() KernelProvider
+	NodeProvider() NodeProvider
 
 	// Tell the Cluster Gateway to migrate a particular replica.
 	MigrateKernelReplica(*gateway.MigrationRequest) error
 
-	// Return a list of the Kubernetes nodes available within the Kubernetes cluster.
-	GetKubernetesNodes() ([]*gateway.KubernetesNode, error)
-
 	GatewayAddress() string // Return the address of the Cluster Gateway from which the list of kernels was retrieved.
+
+	DialGatewayGRPC(string) error // Attempt to connect to the Cluster Gateway's gRPC server using the provided address. Returns an error if connection failed, or nil on success. This should NOT be called from the UI goroutine.
 }
 
 type WorkloadDriverOptions struct {
 	HttpPort int `name:"http_port" description:"Port that the server will listen on." json:"http_port"`
 }
 
-type KernelProvider interface {
-	NumKernels() int32                                                      // Number of currently-active kernels.
-	KernelsSlice() []*gateway.DistributedJupyterKernel                      // List of currently-active kernels.
-	RefreshKernels()                                                        // Manually/explicitly refresh the set of active kernels from the Cluster Gateway.
-	Start()                                                                 // Start querying for kernels periodically.
-	DialGatewayGRPC(string) error                                           // Attempt to connect to the Cluster Gateway's gRPC server using the provided address. Returns an error if connection failed, or nil on success. This should NOT be called from the UI goroutine.
-	SubscribeToRefreshes(string, func([]*gateway.DistributedJupyterKernel)) // Subscribe to Kernel refreshes.
-	UnsubscribeFromRefreshes(string)                                        // Unsubscribe from Kernel refreshes.
+type ResourceProvider[resource any] interface {
+	Count() int32          // Number of currently-active resources.
+	Resources() []resource // List of currently-active resources.
+	RefreshResources()     // Manually/explicitly refresh the set of active resources from the Cluster Gateway.
+	Start(string) error    // Start querying for resources periodically.
 
-	// Kernels() *cmap.ConcurrentMap[string, *gateway.DistributedJupyterKernel] // Map from KernelID to *gateway.DistributedJupyterKernel of currently-active kernels.
+	SubscribeToRefreshes(string, func([]resource)) // Subscribe to Kernel refreshes.
+	UnsubscribeFromRefreshes(string)               // Unsubscribe from Kernel refreshes.
+	DialGatewayGRPC(string) error                  // Attempt to connect to the Cluster Gateway's gRPC server using the provided address. Returns an error if connection failed, or nil on success. This should NOT be called from the UI goroutine.
+}
+
+type KernelProvider interface {
+	ResourceProvider[*gateway.DistributedJupyterKernel]
+}
+
+type NodeProvider interface {
+	ResourceProvider[*KubernetesNode]
+}
+
+type KubernetesNode struct {
+	NodeId          string   `json:"Nodes"`
+	Pods            []string `json:"Pods"`
+	CapacityCPU     int64    `json:"CapacityCPU"`
+	CapacityMemory  int64    `json:"CapacityMemory"`
+	CapacityGPUs    int64    `json:"CapacityGPUs"`
+	CapacityVGPUs   int64    `json:"CapacityVGPUs"`
+	AllocatedCPU    int64    `json:"AllocatedCPU"`
+	AllocatedMemory int64    `json:"AllocatedMemory"`
+	AllocatedGPUs   int64    `json:"AllocatedGPUs"`
+	AllocatedVGPUs  int64    `json:"AllocatedVGPUs"`
+}
+
+func (kn *KubernetesNode) String() string {
+	out, err := json.Marshal(kn)
+	if err != nil {
+		panic(err)
+	}
+
+	return string(out)
 }

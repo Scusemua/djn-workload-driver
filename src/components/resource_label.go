@@ -17,8 +17,16 @@ type ResourceLabel struct {
 	Content      string
 	Class        string
 	FontSize     int
-	Allocated    float32
-	Allocatable  float32
+	Allocated    int64
+	Capacity     int64
+}
+
+func getPercentage(allocated int64, capacity int64) float64 {
+	if capacity == 0 {
+		return 0.0
+	}
+
+	return float64(allocated) / float64(capacity)
 }
 
 func (rl *ResourceLabel) Render() app.UI {
@@ -38,7 +46,7 @@ func (rl *ResourceLabel) Render() app.UI {
 					Class("pf-l-flex__item").
 					Body(
 						app.Span().
-							Text(fmt.Sprintf("%.2f / %.2f (%.2f%%)", rl.Allocated, rl.Allocatable, rl.Allocated/rl.Allocatable)).
+							Text(fmt.Sprintf("%d / %d (%.2f%%)", rl.Allocated, rl.Capacity, getPercentage(rl.Allocated, rl.Capacity))).
 							Style("font-size", fmt.Sprintf("%dpx", rl.FontSize)),
 					),
 			)
@@ -58,7 +66,7 @@ func (rl *ResourceLabel) Render() app.UI {
 					Class("pf-l-flex__item").
 					Body(
 						app.Span().
-							Text(fmt.Sprintf("%.2f / %.2f (%.2f%%)", rl.Allocated, rl.Allocatable, rl.Allocated/rl.Allocatable)).
+							Text(fmt.Sprintf("%d / %d (%.2f%%)", rl.Allocated, rl.Capacity, getPercentage(rl.Allocated, rl.Capacity))).
 							Style("font-size", fmt.Sprintf("%dpx", rl.FontSize)),
 					),
 			)

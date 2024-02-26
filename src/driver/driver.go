@@ -3,12 +3,10 @@ package driver
 import (
 	"context"
 	"errors"
-	"math/rand"
 	"sync"
 	"time"
 
 	"github.com/maxence-charriere/go-app/v9/pkg/app"
-	cmap "github.com/orcaman/concurrent-map/v2"
 	gateway "github.com/scusemua/djn-workload-driver/m/v2/api/proto"
 	"github.com/scusemua/djn-workload-driver/m/v2/src/config"
 	"github.com/scusemua/djn-workload-driver/m/v2/src/domain"
@@ -26,18 +24,18 @@ var (
 type workloadDriverImpl struct {
 	connectedToGateway bool   // Flag indicating whether or not we're currently connected to the Cluster Gateway.
 	gatewayAddress     string // IP address of the Gateway.
-	// kernels                *cmap.ConcurrentMap[string, *gateway.DistributedJupyterKernel] // Currently-active Jupyter kernels (that we know about). Map from Kernel ID to Kernel.
-	nodes                  *cmap.ConcurrentMap[string, *gateway.KubernetesNode] // Currently-active Kubernetes nodes. Map from node ID to node.
-	errorHandler           domain.ErrorHandler                                  // Pass errors here to be displayed to the user.
-	spoofGatewayConnection bool                                                 // Used for development when not actually using a real cluster.
-	nodeQueryInterval      time.Duration                                        // How frequently to query the Gateway for node updates.
-	rpcCallTimeout         time.Duration                                        // Timeout for individual RPC calls.
-	lastNodesRefresh       time.Time                                            // The last time we refreshed the nodes.
-	lastNodesRefreshMutex  sync.Mutex                                           // Sychronizes access to the lastNodesRefresh variable.
-	refreshNodeMutex       sync.Mutex                                           // Synchronizes node refreshes.
-	rpcClient              gateway.ClusterGatewayClient                         // gRPC client to the Cluster Gateway.
+
+	errorHandler           domain.ErrorHandler          // Pass errors here to be displayed to the user.
+	spoofGatewayConnection bool                         // Used for development when not actually using a real cluster.
+	nodeQueryInterval      time.Duration                // How frequently to query the Gateway for node updates.
+	rpcCallTimeout         time.Duration                // Timeout for individual RPC calls.
+	lastNodesRefresh       time.Time                    // The last time we refreshed the nodes.
+	lastNodesRefreshMutex  sync.Mutex                   // Sychronizes access to the lastNodesRefresh variable.
+	refreshNodeMutex       sync.Mutex                   // Synchronizes node refreshes.
+	rpcClient              gateway.ClusterGatewayClient // gRPC client to the Cluster Gateway.
 
 	kernelProvider domain.KernelProvider
+	nodeProvider   domain.NodeProvider
 
 	nodeQueryTicker     *time.Ticker  // Sends ticks to retrieve updates on the nodes.
 	quitNodeQueryTicker chan struct{} // Used to tell the node querier (a goroutine) to stop querying.
@@ -55,10 +53,10 @@ func NewWorkloadDriver(errorHandler domain.ErrorHandler, opts *config.Configurat
 	}
 
 	// kernelMap := cmap.New[*gateway.DistributedJupyterKernel]()
-	nodeMap := cmap.New[*gateway.KubernetesNode]()
+	// nodeMap := cmap.New[*domain.KubernetesNode]()
 	driver := &workloadDriverImpl{
 		// kernels:                &kernelMap,
-		nodes:                  &nodeMap,
+		// nodes:                  &nodeMap,
 		errorHandler:           errorHandler,
 		spoofGatewayConnection: opts.SpoofCluster,
 		nodeQueryInterval:      nodeQueryInterval,
@@ -72,72 +70,14 @@ func NewWorkloadDriver(errorHandler domain.ErrorHandler, opts *config.Configurat
 		driver.kernelProvider = providers.NewKernelProvider(kernelQueryInterval, errorHandler)
 	}
 
+	driver.nodeProvider = providers.NewNodeProvider(nodeQueryInterval, errorHandler, opts.SpoofCluster)
+
 	return driver
 }
 
-func (d *workloadDriverImpl) queryNodes() {
-	for {
-		select {
-		case <-d.nodeQueryTicker.C:
-			d.lastNodesRefreshMutex.Lock()
-
-			if time.Since(d.lastNodesRefresh) < d.nodeQueryInterval {
-				d.lastNodesRefreshMutex.Unlock()
-				continue
-			}
-			d.lastNodesRefreshMutex.Unlock()
-
-			if !d.connectedToGateway {
-				app.Log("[WARNING] Disconnected from Gateway; cannot query for node updates.")
-				return
-			}
-
-			app.Log("Node Querier is refreshing kernels now.")
-			d.refreshNodeMutex.Lock()
-			d.refreshNodes()
-			d.refreshNodeMutex.Unlock()
-		case <-d.quitNodeQueryTicker:
-			app.Log("Ceasing node queries to Gateway.")
-			return
-		}
-	}
-}
-
-// Should not be called from UI goroutine.
-// Must be called with the refreshKernelMutex held.
-func (d *workloadDriverImpl) refreshNodes() {
-	app.Log("Refreshing nodes.")
-
-	if d.spoofGatewayConnection {
-		// TODO(Ben): Spoof nodes?
-
-		// Simulate some delay.
-		delay_ms := rand.Int31n(1500)
-
-		app.Logf("Sleeping for %d milliseconds.", delay_ms)
-		time.Sleep(time.Millisecond * time.Duration(delay_ms))
-	} else {
-		app.Log("Fetching nodes now.")
-		resp, err := d.rpcClient.GetKubernetesNodes(context.TODO(), &gateway.Void{})
-		if err != nil {
-			d.errorHandler.HandleError(err, "Failed to fetch list of active kernels from the Cluster Gateway.")
-		}
-
-		// Clear the current kernels.
-		d.nodes.Clear()
-		for _, node := range resp.Nodes {
-			d.nodes.Set(node.NodeId, node)
-		}
-	}
-
-	d.lastNodesRefresh = time.Now()
-}
-
-func (d *workloadDriverImpl) Start() {
-	// If we're not spoofing the Gateway connection, then periodically query the Gateway for an update of the current active kernels.
-	app.Log("Starting Gateway Querier now.")
-	d.kernelProvider.Start()
-	go d.queryNodes()
+func (d *workloadDriverImpl) Start(addr string) error {
+	// Do nothing.
+	return nil
 }
 
 func (d *workloadDriverImpl) ConnectedToGateway() bool {
@@ -146,8 +86,6 @@ func (d *workloadDriverImpl) ConnectedToGateway() bool {
 
 // This should NOT be called from the UI goroutine.
 func (d *workloadDriverImpl) DialGatewayGRPC(gatewayAddress string) error {
-	d.kernelProvider.DialGatewayGRPC(gatewayAddress)
-
 	if d.spoofGatewayConnection {
 		time.Sleep(time.Second * 1)
 		d.connectedToGateway = true
@@ -174,26 +112,34 @@ func (d *workloadDriverImpl) DialGatewayGRPC(gatewayAddress string) error {
 		d.gatewayAddress = gatewayAddress
 	}
 
+	app.Log("Starting Gateway Querier now.")
+	d.kernelProvider.Start(gatewayAddress)
+	d.nodeProvider.Start(gatewayAddress)
+
 	return nil
 }
 
 // Return a list of currently-active kernels.
-func (d *workloadDriverImpl) KernelsSlice() []*gateway.DistributedJupyterKernel {
-	return d.kernelProvider.KernelsSlice()
+func (d *workloadDriverImpl) Resources() []*gateway.DistributedJupyterKernel {
+	return d.kernelProvider.Resources()
 }
 
 // Return a list of currently-active kernels.
-func (d *workloadDriverImpl) NumKernels() int32 {
-	return d.kernelProvider.NumKernels()
+func (d *workloadDriverImpl) Count() int32 {
+	return d.kernelProvider.Count()
 }
 
 // Manually/explicitly refresh the set of active kernels from the Cluster Gateway.
-func (d *workloadDriverImpl) RefreshKernels() {
-	d.kernelProvider.RefreshKernels()
+func (d *workloadDriverImpl) RefreshResources() {
+	d.kernelProvider.RefreshResources()
 }
 
-func (d *workloadDriverImpl) GetKubernetesNodes() ([]*gateway.KubernetesNode, error) {
-	return nil, nil
+func (d *workloadDriverImpl) KernelProvider() domain.KernelProvider {
+	return d.kernelProvider
+}
+
+func (d *workloadDriverImpl) NodeProvider() domain.NodeProvider {
+	return d.nodeProvider
 }
 
 func (d *workloadDriverImpl) MigrateKernelReplica(arg *gateway.MigrationRequest) error {
