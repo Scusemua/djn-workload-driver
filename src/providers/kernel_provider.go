@@ -47,6 +47,8 @@ func NewKernelProvider(kernelQueryInterval time.Duration, errorHandler domain.Er
 
 	provider.KernelProvider = provider
 
+	app.Logf("Will be querying and refreshing kernels every %v", kernelQueryInterval)
+
 	return provider
 }
 
@@ -98,6 +100,7 @@ func (p *BaseKernelProvider) queryKernels() {
 		case <-p.kernelQueryTicker.C:
 			p.lastKernelRefreshMutex.Lock()
 			// If we've manually refreshed the kernels since the last query interval, then we'll just wait to do our refresh.
+			// This is basically checking if we've refreshed manually anytime recently.
 			if time.Since(p.lastKernelRefresh) < p.kernelQueryInterval {
 				p.lastKernelRefreshMutex.Unlock()
 				continue
@@ -121,7 +124,7 @@ func (p *BaseKernelProvider) NumKernels() int32 {
 	return int32(p.kernels.Count())
 }
 
-func (p *BaseKernelProvider) Kernels() []*gateway.DistributedJupyterKernel {
+func (p *BaseKernelProvider) KernelsSlice() []*gateway.DistributedJupyterKernel {
 	kernels := make([]*gateway.DistributedJupyterKernel, 0, p.NumKernels())
 
 	for kvPair := range p.kernels.IterBuffered() {
@@ -129,6 +132,11 @@ func (p *BaseKernelProvider) Kernels() []*gateway.DistributedJupyterKernel {
 	}
 
 	return kernels
+}
+
+// Map from KernelID to *gateway.DistributedJupyterKernel of currently-active kernels.
+func (p *BaseKernelProvider) Kernels() *cmap.ConcurrentMap[string, *gateway.DistributedJupyterKernel] {
+	return p.kernels
 }
 
 // Actually refresh the kernels.
@@ -163,7 +171,7 @@ func (p *BaseKernelProvider) RefreshKernels() {
 
 func (p *BaseKernelProvider) refreshOccurred() {
 	p.lastKernelRefresh = time.Now()
-	kernels := p.Kernels()
+	kernels := p.KernelsSlice()
 
 	for kv := range p.subscribers.IterBuffered() {
 		handler := kv.Val
