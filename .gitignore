@@ -4,3 +4,4 @@ web/*.wasm
 web/fonts
 web/*.css*
 node_modules
+driver/
