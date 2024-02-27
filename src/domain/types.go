@@ -3,9 +3,11 @@ package domain
 import (
 	"encoding/json"
 	"errors"
+	"net/http"
 	"time"
 
 	gateway "github.com/scusemua/djn-workload-driver/m/v2/api/proto"
+	"nhooyr.io/websocket"
 )
 
 var (
@@ -114,4 +116,14 @@ func (m *ErrorMessage) String() string {
 	}
 
 	return string(out)
+}
+
+type BackendHttpHandler interface {
+	http.Handler
+
+	// Write an error back to the client.
+	WriteError(*websocket.Conn, string)
+
+	// Handle a message/request from the front-end.
+	HandleRequest(*websocket.Conn, *http.Request, map[string]interface{})
 }

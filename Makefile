@@ -29,4 +29,4 @@ build-docker:
 build-and-run: build-all run-local
 
 run-local: 
-	go run cmd/driver/main.go --in-cluster=false --spoof-cluster=true 
+	go run cmd/driver/main.go --in-cluster=false --spoof-cluster=false 

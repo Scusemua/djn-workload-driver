@@ -158,6 +158,7 @@ message ReplicaInfo {
 message MigrationRequest {
   ReplicaInfo targetReplica = 1;
   optional string targetNodeId = 2;
+  string persistentId = 3;
 }
 
 message SmrReadyNotification {
