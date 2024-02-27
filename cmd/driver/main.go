@@ -6,11 +6,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/elliotchance/orderedmap/v2"
 	"github.com/maxence-charriere/go-app/v9/pkg/app"
 	"github.com/scusemua/djn-workload-driver/m/v2/src/components"
 	"github.com/scusemua/djn-workload-driver/m/v2/src/config"
-	"github.com/scusemua/djn-workload-driver/m/v2/src/driver"
 	"github.com/scusemua/djn-workload-driver/m/v2/src/server"
 )
 
@@ -18,12 +16,9 @@ func main() {
 	conf := config.GetConfiguration()
 
 	app.RouteFunc("/", func() app.Composer {
-		mainWindow := &components.MainWindow{
-			GatewayAddress: components.DefaultGatewayAddress,
-			Alerts:         orderedmap.NewOrderedMap[string, *components.Alert](),
-		}
-		driver := driver.NewWorkloadDriver(mainWindow, conf)
-		mainWindow.SetWorkloadDriver(driver)
+		mainWindow := components.NewMainWindow(components.DefaultGatewayAddress)
+		// driver := driver.NewWorkloadDriver(mainWindow, conf)
+		// mainWindow.SetWorkloadDriver(driver)
 		return mainWindow
 	})
 
@@ -61,14 +56,13 @@ func main() {
 		Icon: app.Icon{
 			SVG: "/web/icon.svg",
 		},
-		// Scripts: []string{
-		// 	"/web/empty.mjs",
-		// },
-		// Version: "0.0.1", // Auto-generated in order to trigger pwa update on a local development system.
 	})
 
 	// Used to transfer data from the frontend to the backend.
 	http.Handle("/api/k8s-nodes", server.NewKubeNodeHttpHandler(conf))
+
+	// Used to return the config to the client.
+	http.Handle("/api/config", server.NewConfigHttpHandler(conf))
 
 	fmt.Printf("WorkloadDriver HTTP server is starting now.")
 

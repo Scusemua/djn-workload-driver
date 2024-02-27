@@ -71,6 +71,17 @@ type KubernetesNode struct {
 	AllocatedMemory float64          `json:"AllocatedMemory"`
 	AllocatedGPUs   float64          `json:"AllocatedGPUs"`
 	AllocatedVGPUs  float64          `json:"AllocatedVGPUs"`
+
+	Valid bool `json:"Valid"` // Used to determine if the struct was sent/received correctly over the network.
+}
+
+func (kn *KubernetesNode) String() string {
+	out, err := json.Marshal(kn)
+	if err != nil {
+		panic(err)
+	}
+
+	return string(out)
 }
 
 type KubernetesPod struct {
@@ -78,10 +89,26 @@ type KubernetesPod struct {
 	PodPhase string        `json:"PodPhase"`
 	PodAge   time.Duration `json:"PodAge"`
 	PodIP    string        `json:"PodIP"`
+
+	Valid bool `json:"Valid"` // Used to determine if the struct was sent/received correctly over the network.
 }
 
-func (kn *KubernetesNode) String() string {
-	out, err := json.Marshal(kn)
+func (kp *KubernetesPod) String() string {
+	out, err := json.Marshal(kp)
+	if err != nil {
+		panic(err)
+	}
+
+	return string(out)
+}
+
+type ErrorMessage struct {
+	ErrorMessage string `json:"ErrorMessage"`
+	Valid        bool   `json:"Valid"` // Used to determine if the struct was sent/received correctly over the network.
+}
+
+func (m *ErrorMessage) String() string {
+	out, err := json.Marshal(m)
 	if err != nil {
 		panic(err)
 	}

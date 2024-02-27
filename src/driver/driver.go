@@ -3,7 +3,6 @@ package driver
 import (
 	"context"
 	"errors"
-	"sync"
 	"time"
 
 	"github.com/maxence-charriere/go-app/v9/pkg/app"
@@ -29,9 +28,6 @@ type workloadDriverImpl struct {
 	spoofGatewayConnection bool                         // Used for development when not actually using a real cluster.
 	nodeQueryInterval      time.Duration                // How frequently to query the Gateway for node updates.
 	rpcCallTimeout         time.Duration                // Timeout for individual RPC calls.
-	lastNodesRefresh       time.Time                    // The last time we refreshed the nodes.
-	lastNodesRefreshMutex  sync.Mutex                   // Sychronizes access to the lastNodesRefresh variable.
-	refreshNodeMutex       sync.Mutex                   // Synchronizes node refreshes.
 	rpcClient              gateway.ClusterGatewayClient // gRPC client to the Cluster Gateway.
 
 	kernelProvider domain.KernelProvider

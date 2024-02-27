@@ -38,7 +38,7 @@ func NewKubeNodeHttpHandler(opts *config.Configuration) *KubeNodeHttpHandler {
 		panic(err)
 	}
 
-	handler.logger.Info("Creating server-side HTTP handler.", zap.String("options", opts.String()))
+	handler.logger.Info("Creating server-side KubeNodeHttpHandler.", zap.String("options", opts.String()))
 
 	if opts.InCluster {
 		// creates the in-cluster config
@@ -100,8 +100,13 @@ func NewKubeNodeHttpHandler(opts *config.Configuration) *KubeNodeHttpHandler {
 // Write an error back to the client.
 func (h *KubeNodeHttpHandler) writeError(c *websocket.Conn, errorMessage string) {
 	// Write error back to front-end.
-	msg := map[string]string{"ERROR": errorMessage}
+	msg := &domain.ErrorMessage{
+		ErrorMessage: errorMessage,
+		Valid:        true,
+	}
 	msgJSON, _ := json.Marshal(msg)
+
+	h.logger.Info("Writing error message back to client.", zap.Any("error-message", msg))
 
 	err := c.Write(context.Background(), websocket.MessageBinary, msgJSON)
 	if err != nil {
@@ -263,9 +268,12 @@ func (h *KubeNodeHttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	h.logger.Info("Sending nodes back to client now.")
 	err = c.Write(context.Background(), websocket.MessageBinary, data)
 	if err != nil {
 		h.logger.Error("Error while writing node list back to front-end.", zap.Error(err))
+	} else {
+		h.logger.Info("Successfully sent config back to client.")
 	}
 
 	c.Close(websocket.StatusNormalClosure, "")

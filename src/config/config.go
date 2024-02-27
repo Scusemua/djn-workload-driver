@@ -15,11 +15,14 @@ const (
 )
 
 type Configuration struct {
-	SpoofCluster        bool   `yaml:"spoof-gateway" description:"If true, use the fake cluster."`
-	InCluster           bool   `yaml:"in-cluster" description:"Should be true if running from within the kubernetes cluster."`
-	KernelQueryInterval string `yaml:"kernel-query-interval" default:"5s" description:"How frequently to query the Cluster for updated kernel information."`
-	NodeQueryInterval   string `yaml:"node-query-interval" default:"10s" description:"How frequently to query the Cluster for updated Kubernetes node information."`
-	KubeConfig          string `yaml:"kubeconfig" description:"Absolute path to the kubeconfig file."`
+	SpoofCluster        bool   `yaml:"spoof-gateway" json:"spoof-gateway" description:"If true, use the fake cluster."`
+	InCluster           bool   `yaml:"in-cluster" json:"in-cluster" description:"Should be true if running from within the kubernetes cluster."`
+	KernelQueryInterval string `yaml:"kernel-query-interval" json:"kernel-query-interval" default:"5s" description:"How frequently to query the Cluster for updated kernel information."`
+	NodeQueryInterval   string `yaml:"node-query-interval" json:"node-query-interval" default:"10s" description:"How frequently to query the Cluster for updated Kubernetes node information."`
+	KubeConfig          string `yaml:"kubeconfig" json:"kubeconfig" description:"Absolute path to the kubeconfig file."`
+	GatewayAddress      string `yaml:"gateway-address" json:"gateway-address" description:"The IP address that the front-end should use to connect to the Gateway."`
+
+	Valid bool `json:"Valid"` // Used to determine if the struct was sent/received correctly over the network.
 }
 
 func (opts *Configuration) String() string {
@@ -31,6 +34,7 @@ func GetConfiguration() *Configuration {
 	var inClusterFlag = flag.Bool("in-cluster", false, "Should be true if running from within the kubernetes cluster.")
 	var kernelQueryIntervalFlag = flag.String("kernel-query-interval", "60s", "How often to refresh kernels from Cluster Gateway.")
 	var nodeQueryIntervalFlag = flag.String("node-query-interval", "120s", "How often to refresh nodes from Cluster Gateway.")
+	var gatewayAddressFlag = flag.String("gateway-address", "localhost:9990", "The IP address that the front-end should use to connect to the Gateway.")
 
 	var kubeconfigFlag *string
 	if home := homedir.HomeDir(); home != "" {
@@ -47,6 +51,8 @@ func GetConfiguration() *Configuration {
 		KernelQueryInterval: *kernelQueryIntervalFlag,
 		NodeQueryInterval:   *nodeQueryIntervalFlag,
 		KubeConfig:          *kubeconfigFlag,
+		GatewayAddress:      *gatewayAddressFlag,
+		Valid:               true,
 	}
 }
 
