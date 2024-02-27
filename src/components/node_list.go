@@ -66,7 +66,6 @@ func (nl *NodeList) Render() app.UI {
 	nodes := nl.Nodes
 
 	app.Logf("(%p) Rendering NodeList with %d node(s).", nl, len(nodes))
-
 	return app.Div().
 		Class("pf-v5-c-card pf-m-expanded").
 		Body(
