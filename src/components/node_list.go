@@ -2,6 +2,7 @@ package components
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/google/uuid"
 	"github.com/maxence-charriere/go-app/v9/pkg/app"
@@ -32,7 +33,11 @@ func NewNodeList(workloadDriver domain.WorkloadDriver, errorHandler domain.Error
 		radioButtonsVisible: radioButtonsVisible,
 	}
 
-	nodeList.Nodes = workloadDriver.NodeProvider().Resources()
+	nodes := workloadDriver.NodeProvider().Resources()
+	sort.Slice(nodes, func(i int, j int) bool {
+		return nodes[i].NodeId < nodes[j].NodeId
+	})
+	nodeList.Nodes = nodes
 
 	return nodeList
 }
@@ -50,6 +55,9 @@ func (nl *NodeList) handleNodesRefreshed(nodes []*domain.KubernetesNode) {
 	}
 
 	app.Logf("NodeList %s (%p) is handling a nodes refresh. Number of nodes: %d.", nl.id, nl, len(nodes))
+	sort.Slice(nodes, func(i int, j int) bool {
+		return nodes[i].NodeId < nodes[j].NodeId
+	})
 	nl.Nodes = nodes
 	nl.Update()
 }
@@ -58,10 +66,6 @@ func (nl *NodeList) Render() app.UI {
 	nodes := nl.Nodes
 
 	app.Logf("(%p) Rendering NodeList with %d node(s).", nl, len(nodes))
-
-	for i, node := range nodes {
-		app.Logf("Node #%d: %v", i, node)
-	}
 
 	return app.Div().
 		Class("pf-v5-c-card pf-m-expanded").
@@ -87,7 +91,7 @@ func (nl *NodeList) Render() app.UI {
 												Class("pf-v5-c-data-list__item-control").
 												Body(
 													app.Div().Class("pf-v5-c-radio").Body(
-														app.Input().Class("pf-v5-c-radio__input").Type("radio").Name(fmt.Sprintf("node-%d-radio", i)).OnInput(func(ctx app.Context, e app.Event) {
+														app.Input().Class("pf-v5-c-radio__input").Type("radio").Name(fmt.Sprintf("node-list-%s-radio-buttons", nl.id)).ID(fmt.Sprintf("node-%d-radio", i)).OnInput(func(ctx app.Context, e app.Event) {
 															app.Logf("Checkbox node-%d-radio received input. Context: %v. Event: %v.", i, ctx, e)
 															nl.selectedIdx = i
 														}),
