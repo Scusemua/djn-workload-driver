@@ -204,10 +204,10 @@ func (kl *KernelList) Render() app.UI {
 														Class("pf-v5-c-data-list__cell pf-m-align-left").
 														Body(
 															app.Div().
-																Class("pf-l-flex pf-m-column pf-m-space-items-none").
+																Class("pf-v5-l-flex pf-m-column pf-m-space-items-none").
 																Body(
 																	app.Div().
-																		Class("pf-l-flex pf-m-column").
+																		Class("pf-v5-l-flex pf-m-column").
 																		Body(
 																			app.P().
 																				Text("Kernel "+kernel_id).
@@ -216,7 +216,7 @@ func (kl *KernelList) Render() app.UI {
 																		),
 																),
 															app.Div().
-																Class("pf-l-flex pf-m-wrap").
+																Class("pf-v5-l-flex pf-m-wrap").
 																Body(
 																	NewKernelReplicasLabel(kernels[kernel_id].GetNumReplicas(), 16),
 																	NewKernelStatusLabel(kernels[kernel_id].GetStatus(), 16)),
@@ -235,20 +235,20 @@ func (kl *KernelList) Render() app.UI {
 									// Expanded content.
 									app.Section().Style("max-height", kl.getMaxHeight(kernel_id)).Class("pf-v5-c-data-list__expandable-content collapsed").ID(fmt.Sprintf("content-%s", kernel_id)).Body( // .Hidden(!kl.expanded[kernel_id])
 										app.Div().Class("pf-v5-c-data-list__expandable-content-body").Body(
-											app.Table().Class("pf-v5-c-table pf-m-compact pf-m-grid-lg pf-m-no-border-rows").Body(
+											app.Table().Class("pf-v5-c-table pf-m-compact pf-m-grid-lg").Body(
 												app.THead().Body(
-													app.Tr().Role("row").Body(
+													app.Tr().Role("row").Class("pf-v5-c-table__tr").Body(
 														// app.Td().Class("pf-v5-c-table__check").Role("cell").Body(
 														// 	app.Input().Type("checkbox").Name("check-all"),
 														// ),
 														app.Th().Class("pf-v5-c-table__th").Role("columnheader").Scope("col").Body(
-															app.P().Text("Replica"),
+															app.P().Text("Replica ID"),
 														),
 														app.Th().Class("pf-v5-c-table__th").Role("columnheader").Scope("col").Body(
-															app.P().Text("Pod"),
+															app.P().Text("Pod Name"),
 														),
 														app.Th().Class("pf-v5-c-table__th").Role("columnheader").Scope("col").Body(
-															app.P().Text("Node"),
+															app.P().Text("Node Name"),
 														),
 														app.Td().Class("pf-v5-c-table__td"),
 													),

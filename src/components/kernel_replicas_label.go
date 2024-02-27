@@ -23,10 +23,10 @@ func NewKernelReplicasLabel(numReplicas int32, fontSize int) *KernelReplicasLabe
 
 func (kl *KernelReplicasLabel) Render() app.UI {
 	return app.Div().
-		Class("pf-l-flex pf-m-space-items-xs").
+		Class("pf-v5-l-flex pf-m-space-items-xs").
 		Body(
 			app.Div().
-				Class("pf-l-flex__item").
+				Class("pf-v5-l-flex__item").
 				Body(
 					app.I().
 						Class("fas fa-cube").
@@ -34,7 +34,7 @@ func (kl *KernelReplicasLabel) Render() app.UI {
 						Aria("hidden", true),
 				),
 			app.Div().
-				Class("pf-l-flex__item").
+				Class("pf-v5-l-flex__item").
 				Body(
 					app.Span().
 						Text(kl.numReplicas).

@@ -55,7 +55,11 @@ func (c *MigrationModal) Render() app.UI {
 					c.clear()
 				}).Body(
 				app.Div().Class("pf-v5-c-form__group").Body(
-					NewNodeList(c.WorkloadDriver, c.ErrorHandler, true, c.OnNodeSelected),
+					app.Div().Class("pf-v5-l-grid pf-m-gutter").Body(
+						app.Div().Class("pf-v5-l-grid__item pf-m-gutter pf-m-12-col").Body(
+							NewNodeList(c.WorkloadDriver, c.ErrorHandler, true, c.OnNodeSelected),
+						),
+					),
 				),
 			),
 		},

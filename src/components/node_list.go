@@ -31,6 +31,8 @@ func NewNodeList(workloadDriver domain.WorkloadDriver, errorHandler domain.Error
 		errorHandler:   errorHandler,
 	}
 
+	nodeList.Nodes = workloadDriver.NodeProvider().Resources()
+
 	return nodeList
 }
 
@@ -54,6 +56,12 @@ func (nl *NodeList) handleNodesRefreshed(nodes []*domain.KubernetesNode) {
 func (nl *NodeList) Render() app.UI {
 	nodes := nl.Nodes
 
+	app.Logf("(%p) Rendering NodeList with %d node(s).", nl, len(nodes))
+
+	for i, node := range nodes {
+		app.Logf("Node #%d: %v", i, node)
+	}
+
 	return app.Div().
 		Class("pf-v5-c-card pf-m-expanded").
 		Body(
@@ -74,22 +82,6 @@ func (nl *NodeList) Render() app.UI {
 									app.Div().
 										Class("pf-v5-c-data-list__item-row").
 										Body(
-											// app.Div().Class("").Style("padding", "4px 4px").Body(
-											// 	app.Button().Class("pf-v5-c-button pf-m-secondary").Type("button").
-											// 		Style("margin-right", "4px").
-											// 		OnClick(func(ctx app.Context, e app.Event) {
-											// 			nl.selectedIdx = i
-											// 			nl.onNodeSelected(nl.Nodes[i])
-											// 			nl.Update()
-											// 		}),
-											// 	app.If(nl.radioButtonsVisible, app.Button().Class("pf-v5-c-button pf-m-secondary").Type("button").Text("Clear Selection").
-											// 		Style("margin-left", "4px").
-											// 		OnClick(func(ctx app.Context, e app.Event) {
-											// 			nl.selectedIdx = -1
-											// 			nl.onNodeSelected(nil)
-											// 			nl.Update()
-											// 		})),
-											// ),
 											app.If(nl.radioButtonsVisible, app.Div().
 												Class("pf-v5-c-data-list__item-control").
 												Body(
@@ -107,10 +99,10 @@ func (nl *NodeList) Render() app.UI {
 														Class("pf-v5-c-data-list__cell pf-m-align-left").
 														Body(
 															app.Div().
-																Class("pf-l-flex pf-m-column pf-m-space-items-none").
+																Class("pf-v5-l-flex pf-m-column pf-m-space-items-none").
 																Body(
 																	app.Div().
-																		Class("pf-l-flex pf-m-column").
+																		Class("pf-v5-l-flex pf-m-column").
 																		Body(
 																			app.P().
 																				Text("Node "+nodes[i].NodeId).
@@ -119,7 +111,7 @@ func (nl *NodeList) Render() app.UI {
 																		),
 																),
 															app.Div().
-																Class("pf-l-flex pf-m-wrap").
+																Class("pf-v5-l-flex pf-m-wrap").
 																Body(
 																	&ResourceLabel{
 																		ResourceName: "CPU",

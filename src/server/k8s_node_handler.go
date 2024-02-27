@@ -149,29 +149,37 @@ func (h *KubeNodeHttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	h.logger.Info("", zap.Bool("spoof-nodes", spoofNodes))
 
 	nodes, err := h.clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
-	nodeUsageMetrics, err := h.metricsClient.MetricsV1beta1().NodeMetricses().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		h.logger.Error("Failed to retrieve nodes from Kubernetes.", zap.Error(err))
 		h.writeError(c, "Failed to retrieve nodes from Kubernetes.")
 		return
 	}
 
+	nodeUsageMetrics, err := h.metricsClient.MetricsV1beta1().NodeMetricses().List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		h.logger.Error("Failed to retrieve node metrics from Kubernetes.", zap.Error(err))
+		h.writeError(c, "Failed to retrieve node metrics from Kubernetes.")
+		return
+	}
+
 	h.logger.Info(fmt.Sprintf("Sending a list of %d nodes back to the client.", len(nodes.Items)), zap.Int("num-nodes", len(nodes.Items)))
 
-	var kubernetesNodes map[string]domain.KubernetesNode = make(map[string]domain.KubernetesNode, len(nodes.Items))
+	var kubernetesNodes map[string]*domain.KubernetesNode = make(map[string]*domain.KubernetesNode, len(nodes.Items))
 	val := nodes.Items[0].Status.Capacity[corev1.ResourceCPU]
 	val.AsInt64()
 	for _, node := range nodes.Items {
 		allocatableCPU := node.Status.Capacity[corev1.ResourceCPU]
 		allocatableMemory := node.Status.Capacity[corev1.ResourceMemory]
 
-		allocCpu, _ := allocatableCPU.AsInt64()
-		allocMem, _ := allocatableMemory.AsInt64()
+		allocCpu := allocatableCPU.AsApproximateFloat64()
+		allocMem := allocatableMemory.AsApproximateFloat64()
+
+		h.logger.Info("Memory as inf.Dec.", zap.String("node-id", node.Name), zap.Any("mem inf.Dec", allocatableMemory.AsDec().String()))
 
 		kubernetesNode := domain.KubernetesNode{
 			NodeId:         node.Name,
 			CapacityCPU:    allocCpu,
-			CapacityMemory: allocMem,
+			CapacityMemory: allocMem / 976600.0, // Convert from Ki to GB.
 			// CapacityGPUs:    0,
 			// CapacityVGPUs:   0,
 			// AllocatedCPU:    0,
@@ -180,7 +188,7 @@ func (h *KubeNodeHttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			// AllocatedVGPUs:  0,
 		}
 
-		kubernetesNodes[node.Name] = kubernetesNode
+		kubernetesNodes[node.Name] = &kubernetesNode
 	}
 
 	for _, nodeMetric := range nodeUsageMetrics.Items {
@@ -188,11 +196,22 @@ func (h *KubeNodeHttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		kubeNode := kubernetesNodes[nodeName]
 		h.logger.Info("Node metric.", zap.String("node", nodeName), zap.Any("metric", nodeMetric))
 
-		cpu, _ := nodeMetric.Usage.Cpu().AsInt64()
-		mem, _ := nodeMetric.Usage.Memory().AsInt64()
+		cpu := nodeMetric.Usage.Cpu().AsApproximateFloat64()
+		// if !ok {
+		// 	h.logger.Error("Could not convert CPU usage metric to Int64.", zap.Any("cpu-metric", nodeMetric.Usage.Cpu()))
+		// }
+		h.logger.Info("CPU metric.", zap.String("node-id", nodeName), zap.Float64("cpu", cpu))
+
+		mem := nodeMetric.Usage.Memory().AsApproximateFloat64()
+		// if !ok {
+		// 	h.logger.Error("Could not convert 	memory usage metric to Int64.", zap.Any("mem-metric", nodeMetric.Usage.Memory()))
+		// }
+		h.logger.Info("Memory metric.", zap.String("node-id", nodeName), zap.Float64("memory", cpu))
 
 		kubeNode.AllocatedCPU = cpu
-		kubeNode.AllocatedMemory = int64(float64(mem) / 1.024e-6) // Convert from Ki to GB.
+		kubeNode.AllocatedMemory = mem / 976600.0 // Convert from Ki to GB.
+
+		kubernetesNodes[nodeName] = kubeNode
 	}
 
 	for _, node := range kubernetesNodes {

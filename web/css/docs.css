@@ -28,15 +28,15 @@
     margin-right: 3px;
 }
 
-.update-button {
+/* .update-button {
     font-weight: bold;
-    font-size: 28pt;
+    font-size: 16pt;
     width: 400px;
     height: 100px;
     display: flex;
     align-items: center;
     justify-content: center;
-}
+} */
 
 .collapsed {
     overflow: hidden;
