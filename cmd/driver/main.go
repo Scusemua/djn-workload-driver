@@ -1,20 +1,15 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"net/http"
 	"time"
 
 	"github.com/maxence-charriere/go-app/v9/pkg/app"
-	gateway "github.com/scusemua/djn-workload-driver/m/v2/api/proto"
 	"github.com/scusemua/djn-workload-driver/m/v2/src/components"
 	"github.com/scusemua/djn-workload-driver/m/v2/src/config"
-	"github.com/scusemua/djn-workload-driver/m/v2/src/proxy"
 	"github.com/scusemua/djn-workload-driver/m/v2/src/server"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 func main() {
@@ -26,30 +21,6 @@ func main() {
 		// mainWindow.SetWorkloadDriver(driver)
 		return mainWindow
 	})
-
-	if app.IsClient {
-		fmt.Printf("Trying to connect to Gateway at ws://127.0.0.1:9996.\n")
-
-		webSocketProxyClient := proxy.NewWebSocketProxyClient(time.Minute)
-		conn, err := grpc.Dial("ws://127.0.0.1:9996", grpc.WithContextDialer(webSocketProxyClient.Dialer), grpc.WithTransportCredentials(insecure.NewCredentials()))
-		if err != nil {
-			panic(err)
-		}
-		defer conn.Close()
-
-		fmt.Printf("Connected to Gateway.\n")
-
-		client := gateway.NewClusterGatewayClient(conn)
-
-		fmt.Printf("Created new ClusterGatewayClient.\n")
-
-		resp, err := client.ID(context.Background(), &gateway.Void{})
-		if err != nil {
-			panic(err)
-		}
-
-		fmt.Printf("Response: %v\n", resp)
-	}
 
 	// Once the routes set up, the next thing to do is to either launch the app
 	// or the server that serves the app.
