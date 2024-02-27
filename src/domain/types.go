@@ -3,6 +3,7 @@ package domain
 import (
 	"encoding/json"
 	"errors"
+	"time"
 
 	gateway "github.com/scusemua/djn-workload-driver/m/v2/api/proto"
 )
@@ -58,16 +59,25 @@ type NodeProvider interface {
 }
 
 type KubernetesNode struct {
-	NodeId          string   `json:"Nodes"`
-	Pods            []string `json:"Pods"`
-	CapacityCPU     float64  `json:"CapacityCPU"`
-	CapacityMemory  float64  `json:"CapacityMemory"`
-	CapacityGPUs    float64  `json:"CapacityGPUs"`
-	CapacityVGPUs   float64  `json:"CapacityVGPUs"`
-	AllocatedCPU    float64  `json:"AllocatedCPU"`
-	AllocatedMemory float64  `json:"AllocatedMemory"`
-	AllocatedGPUs   float64  `json:"AllocatedGPUs"`
-	AllocatedVGPUs  float64  `json:"AllocatedVGPUs"`
+	NodeId          string           `json:"Nodes"`
+	Pods            []*KubernetesPod `json:"Pods"`
+	Age             time.Duration    `json:"Age"`
+	IP              string           `json:"IP"`
+	CapacityCPU     float64          `json:"CapacityCPU"`
+	CapacityMemory  float64          `json:"CapacityMemory"`
+	CapacityGPUs    float64          `json:"CapacityGPUs"`
+	CapacityVGPUs   float64          `json:"CapacityVGPUs"`
+	AllocatedCPU    float64          `json:"AllocatedCPU"`
+	AllocatedMemory float64          `json:"AllocatedMemory"`
+	AllocatedGPUs   float64          `json:"AllocatedGPUs"`
+	AllocatedVGPUs  float64          `json:"AllocatedVGPUs"`
+}
+
+type KubernetesPod struct {
+	PodName  string        `json:"PodName"`
+	PodPhase string        `json:"PodPhase"`
+	PodAge   time.Duration `json:"PodAge"`
+	PodIP    string        `json:"PodIP"`
 }
 
 func (kn *KubernetesNode) String() string {

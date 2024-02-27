@@ -53,7 +53,7 @@ func main() {
 		LoadingLabel:       "Workload Driver for the Distributed Jupyter Notebook platform.",
 		Author:             "Benjamin Carver",
 		Description:        "Workload Driver for the Distributed Jupyter Notebook platform.",
-		AutoUpdateInterval: time.Millisecond * 250,
+		AutoUpdateInterval: time.Second * 2,
 		Styles: []string{
 			"/web/main.css",
 			"/web/css/docs.css",

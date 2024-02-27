@@ -21,6 +21,7 @@ type NodeList struct {
 	workloadDriver domain.WorkloadDriver
 
 	Nodes       []*domain.KubernetesNode
+	expanded    map[string]bool
 	selectedIdx int
 }
 
@@ -37,6 +38,7 @@ func NewNodeList(workloadDriver domain.WorkloadDriver, errorHandler domain.Error
 	sort.Slice(nodes, func(i int, j int) bool {
 		return nodes[i].NodeId < nodes[j].NodeId
 	})
+	nodeList.expanded = make(map[string]bool, len(nodes))
 	nodeList.Nodes = nodes
 
 	return nodeList
@@ -58,8 +60,32 @@ func (nl *NodeList) handleNodesRefreshed(nodes []*domain.KubernetesNode) {
 	sort.Slice(nodes, func(i int, j int) bool {
 		return nodes[i].NodeId < nodes[j].NodeId
 	})
+
+	refreshedExpanded := make(map[string]bool, len(nodes))
+
+	for _, node := range nodes {
+		var expanded, ok bool
+
+		if expanded, ok = nl.expanded[node.NodeId]; ok {
+			refreshedExpanded[node.NodeId] = expanded
+		} else {
+			expanded = false
+			refreshedExpanded[node.NodeId] = false
+		}
+	}
+
+	nl.expanded = refreshedExpanded
 	nl.Nodes = nodes
+
 	nl.Update()
+}
+
+func (nl *NodeList) getMaxHeight(node_id string) string {
+	if nl.expanded[node_id] {
+		return "250px"
+	} else {
+		return "0px"
+	}
 }
 
 func (nl *NodeList) Render() app.UI {
@@ -86,16 +112,44 @@ func (nl *NodeList) Render() app.UI {
 									app.Div().
 										Class("pf-v5-c-data-list__item-row").
 										Body(
-											app.If(nl.radioButtonsVisible, app.Div().
-												Class("pf-v5-c-data-list__item-control").
-												Body(
-													app.Div().Class("pf-v5-c-radio").Body(
-														app.Input().Class("pf-v5-c-radio__input").Type("radio").Name(fmt.Sprintf("node-list-%s-radio-buttons", nl.id)).ID(fmt.Sprintf("node-%d-radio", i)).OnInput(func(ctx app.Context, e app.Event) {
-															app.Logf("Checkbox node-%d-radio received input. Context: %v. Event: %v.", i, ctx, e)
-															nl.selectedIdx = i
-														}),
-													),
-												)),
+											app.Div().
+												Class("pf-v5-c-data-list__item-control").Body(
+												app.If(nl.radioButtonsVisible,
+													app.Div().Class("pf-v5-c-data-list__check").
+														Body(
+															app.Div().Class("pf-v5-c-radio").Body(
+																app.Input().Class("pf-v5-c-radio__input").Type("radio").Name(fmt.Sprintf("node-list-%s-radio-buttons", nl.id)).ID(fmt.Sprintf("node-%d-radio", i)).OnInput(func(ctx app.Context, e app.Event) {
+																	app.Logf("Checkbox node-%d-radio received input. Context: %v. Event: %v.", i, ctx, e)
+																	nl.selectedIdx = i
+																}),
+															),
+														)),
+												app.Div().Class("pf-v5-c-data-list__toggle").Body(
+													app.Button().Class("pf-v5-c-button pf-m-plain").Type("button").ID(fmt.Sprintf("expand-button-kernel-%s", nodes[i].NodeId)).Body(
+														app.Div().Class("pf-v5-c-data-list__toggle-icon").Body(
+															app.If(nl.expanded[nodes[i].NodeId], app.I().ID(fmt.Sprintf("expand-icon-kernel-%s", nodes[i].NodeId)).Class("fas fa-angle-down")).
+																Else(app.I().ID(fmt.Sprintf("expand-icon-kernel-%s", nodes[i].NodeId)).Class("fas fa-angle-right")),
+														),
+													).OnClick(func(ctx app.Context, e app.Event) {
+														// If there's no entry yet, then we default to false, and since we clicked the expand button, we set it to true now.
+														if _, ok := nl.expanded[nodes[i].NodeId]; !ok {
+															nl.expanded[nodes[i].NodeId] = true
+
+															app.Logf("Node %s should be expanded now.", nodes[i].NodeId)
+														} else {
+															nl.expanded[nodes[i].NodeId] = !nl.expanded[nodes[i].NodeId]
+
+															if nl.expanded[nodes[i].NodeId] {
+																app.Logf("Node %s should be expanded now.", nodes[i].NodeId)
+															} else {
+																app.Logf("Node %s should be collapsed now.", nodes[i].NodeId)
+															}
+														}
+
+														nl.Update()
+													}, nodes[i].NodeId),
+												),
+											),
 											app.Div().
 												Class("pf-v5-c-data-list__item-content").
 												Body(
@@ -111,11 +165,55 @@ func (nl *NodeList) Render() app.UI {
 																			app.P().
 																				Text("Node "+nodes[i].NodeId).
 																				Style("font-weight", "bold").
-																				Style("font-size", "16px"),
+																				Style("font-size", "20px"),
 																		),
+																),
+															app.Div().Class("pf-v5-c-description-list pf-m-2-col-on-lg").
+																Style("padding", "8px 0px 0px 0px").
+																Body(
+																	// app.Div().Class("pf-v5-c-description-list__group").Body(
+																	// 	app.Div().Class("pf-v5-c-description-list__term").
+																	// 		Style("margin-bottom", "-8px").Body(
+																	// 		app.Span().Class("pf-v5-c-description-list__text").Body(
+																	// 			app.P().Text("Status"),
+																	// 		),
+																	// 	),
+																	// 	app.Div().Class("pf-v5-c-description-list__description").Body(
+																	// 		app.Div().Class("pf-v5-c-description-list__text").Body(
+																	// 			NewNodeStatusLabel(nodes[i].Status, 16),
+																	// 		),
+																	// 	),
+																	// ),
+																	app.Div().Class("pf-v5-c-description-list__group").Body(
+																		app.Div().Class("pf-v5-c-description-list__term").
+																			Style("margin-bottom", "-8px").Body(
+																			app.Span().Class("pf-v5-c-description-list__text").Body(
+																				app.P().Text("IP"),
+																			),
+																		),
+																		app.Div().Class("pf-v5-c-description-list__description").Body(
+																			app.Div().Class("pf-v5-c-description-list__text").Body(
+																				app.P().Text(nodes[i].IP),
+																			),
+																		),
+																	),
+																	app.Div().Class("pf-v5-c-description-list__group").Body(
+																		app.Div().Class("pf-v5-c-description-list__term").
+																			Style("margin-bottom", "-8px").Body(
+																			app.Span().Class("pf-v5-c-description-list__text").Body(
+																				app.P().Text("Age"),
+																			),
+																		),
+																		app.Div().Class("pf-v5-c-description-list__description").Body(
+																			app.Div().Class("pf-v5-c-description-list__text").Body(
+																				app.P().Text(nodes[i].Age.String()),
+																			),
+																		),
+																	),
 																),
 															app.Div().
 																Class("pf-v5-l-flex pf-m-wrap").
+																Style("padding", "8px 0px 0px 0px").
 																Body(
 																	&ResourceLabel{
 																		ResourceName: "CPU",
@@ -144,6 +242,47 @@ func (nl *NodeList) Render() app.UI {
 																)),
 												),
 										),
+									// Expanded content.
+									app.Section().Style("max-height", nl.getMaxHeight(nodes[i].NodeId)).Class("pf-v5-c-data-list__expandable-content collapsed").ID(fmt.Sprintf("content-%s", nodes[i].NodeId)).Body( // .Hidden(!nl.expanded[kernel_id])
+										app.Div().Class("pf-v5-c-data-list__expandable-content-body").Body(
+											app.Table().Class("pf-v5-c-table pf-m-compact pf-m-grid-lg").Body(
+												app.THead().Body(
+													app.Tr().Role("row").Class("pf-v5-c-table__tr").Body(
+														app.Th().Class("pf-v5-c-table__th").Role("columnheader").Scope("col").Body(
+															app.P().Text("Pod ID"),
+														),
+														app.Th().Class("pf-v5-c-table__th").Role("columnheader").Scope("col").Body(
+															app.P().Text("Phase"),
+														),
+														app.Th().Class("pf-v5-c-table__th").Role("columnheader").Scope("col").Body(
+															app.P().Text("Age"),
+														),
+														app.Th().Class("pf-v5-c-table__th").Role("columnheader").Scope("col").Body(
+															app.P().Text("IP"),
+														),
+													),
+												),
+												app.TBody().Role("rowgroup").Body(
+													app.Range(nodes[i].Pods).Slice(func(j int) app.UI {
+														return app.Tr().Role("row").Class("pf-v5-c-table__tr").Body(
+															app.Td().Role("cell").Body(
+																app.Span().Text(nodes[i].Pods[j].PodName),
+															),
+															app.Td().Role("cell").Body(
+																NewPodStatusLabel(nodes[i].Pods[j].PodPhase, 16),
+															),
+															app.Td().Role("cell").Body(
+																app.Span().Text(nodes[i].Pods[j].PodAge),
+															),
+															app.Td().Role("cell").Body(
+																app.Span().Text(nodes[i].Pods[j].PodIP),
+															))
+													},
+													),
+												),
+											),
+										),
+									),
 								)
 						}),
 					)))

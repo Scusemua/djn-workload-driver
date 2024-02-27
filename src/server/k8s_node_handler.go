@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/scusemua/djn-workload-driver/m/v2/src/config"
@@ -176,10 +177,44 @@ func (h *KubeNodeHttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 		h.logger.Info("Memory as inf.Dec.", zap.String("node-id", node.Name), zap.Any("mem inf.Dec", allocatableMemory.AsDec().String()))
 
+		ctx, cancel := context.WithTimeout(r.Context(), time.Second*15)
+		defer cancel()
+
+		pods, err := h.clientset.CoreV1().Pods("default").List(ctx, metav1.ListOptions{
+			FieldSelector: "spec.nodeName=" + node.Name,
+		})
+
+		if err != nil {
+			h.logger.Error("Could not retrieve Pods running on node.", zap.String("node", node.Name), zap.Error(err))
+		}
+
+		var kubePods []*domain.KubernetesPod
+		if pods != nil {
+			kubePods = make([]*domain.KubernetesPod, 0, len(pods.Items))
+
+			for _, pod := range pods.Items {
+				kubePod := &domain.KubernetesPod{
+					PodName:  pod.ObjectMeta.Name,
+					PodPhase: string(pod.Status.Phase),
+					PodIP:    pod.Status.PodIP,
+					PodAge:   time.Since(pod.GetCreationTimestamp().Time).Round(time.Second),
+				}
+
+				kubePods = append(kubePods, kubePod)
+			}
+		}
+
+		sort.Slice(kubePods, func(i, j int) bool {
+			return kubePods[i].PodName < kubePods[j].PodName
+		})
+
 		kubernetesNode := domain.KubernetesNode{
 			NodeId:         node.Name,
 			CapacityCPU:    allocCpu,
 			CapacityMemory: allocMem / 976600.0, // Convert from Ki to GB.
+			Pods:           kubePods,
+			Age:            time.Since(node.GetCreationTimestamp().Time).Round(time.Second),
+			IP:             node.Status.Addresses[0].Address,
 			// CapacityGPUs:    0,
 			// CapacityVGPUs:   0,
 			// AllocatedCPU:    0,

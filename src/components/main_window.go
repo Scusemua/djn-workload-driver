@@ -316,10 +316,10 @@ func (w *MainWindow) Render() app.UI {
 																	)),
 														)),
 											app.Div().Class("pf-v5-l-grid pf-m-gutter").Body(
-												app.Div().Class("pf-v5-l-grid__item pf-m-gutter pf-m-5-col").Body(
+												app.Div().Class("pf-v5-l-grid__item pf-m-gutter pf-m-6-col").Body(
 													NewKernelList(w.workloadDriver, w, w.onMigrateButtonClicked),
 												),
-												app.Div().Class("pf-v5-l-grid__item pf-m-gutter pf-m-4-col").Body(
+												app.Div().Class("pf-v5-l-grid__item pf-m-gutter pf-m-6-col").Body(
 													NewNodeList(w.workloadDriver, w, false, func(kn *domain.KubernetesNode) { /* Do nothing */ }),
 												),
 											)),

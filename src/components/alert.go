@@ -36,7 +36,7 @@ func (a *Alert) Render() app.UI {
 			),
 			app.P().Class("pf-v5-c-alert__title").Body(
 				app.Span().Class("pf-v5-screen-reader").Text(a.Title),
-			),
+			).Text(a.Title),
 			app.Div().Class("pf-v5-c-alert__action").Body(
 				app.Button().Class("pf-v5-c-button pf-m-plain").Type("button").Body(
 					app.I().Class("fas fa-times"),

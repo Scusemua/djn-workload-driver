@@ -34,13 +34,10 @@ func NewKernelList(workloadDriver domain.WorkloadDriver, errorHandler domain.Err
 		workloadDriver:         workloadDriver,
 		errorHandler:           errorHandler,
 		onMigrateButtonClicked: onMigrateButtonClicked,
-		// expanded:               make(map[string]bool),
-		selected: make(map[string]bool),
+		selected:               make(map[string]bool),
 	}
 
 	kl.recreateState(workloadDriver.KernelProvider().Resources())
-
-	// app.Logf("Created new KL: %s. Number of kernels: %d.", kl.id, len(kl.Kernels))
 
 	return kl
 }
@@ -72,19 +69,6 @@ func (kl *KernelList) recreateState(kernels []*gateway.DistributedJupyterKernel)
 		}
 
 		refreshedKernels[kernel.KernelId] = kernel
-
-		// If this section is not expanded, then make sure the icon associated with it is pointing to the right.
-		// if !expanded {
-		// 	jsObject := app.Window().GetElementByID(fmt.Sprintf("expand-icon-kernel-%s", kernel.KernelId)).JSValue()
-
-		// 	// If the icon exists already, then set it to point right.
-		// 	// If it doesn't exist, then just skip. It hasn't been rendered yet; the current kernel is brand new.
-		// 	if jsObject != nil && !jsObject.IsNull() {
-		// 		classListJS := jsObject.Get("classList")
-		// 		classListJS.Call("remove", "fa-angle-down")
-		// 		classListJS.Call("add", "fa-angle-right")
-		// 	}
-		// }
 	}
 	// Assign at the end so we can use existing values in 'expanded' to set the new values of 'expanded'.
 	// Like, any already-expanded entries in the list should remain expanded after we add the refreshed kernels.
@@ -165,23 +149,6 @@ func (kl *KernelList) Render() app.UI {
 																}
 															}
 
-															// jsObject := app.Window().GetElementByID(fmt.Sprintf("expand-icon-kernel-%s", kernel_id)).JSValue()
-															// if jsObject != nil && !jsObject.IsNull() {
-															// 	classListJS := jsObject.Get("classList")
-
-															// 	if kl.expanded[kernel_id] {
-															// 		// It's expanded.
-															// 		// Change the icon to be pointing down instead of to the right.
-															// 		classListJS.Call("remove", "fa-angle-right")
-															// 		classListJS.Call("add", "fa-angle-down")
-															// 	} else {
-															// 		// It's collapsed.
-															// 		// Change the icon to be pointing to the right instead of down.
-															// 		classListJS.Call("remove", "fa-angle-down")
-															// 		classListJS.Call("add", "fa-angle-right")
-															// 	}
-															// }
-
 															kl.Update()
 														}, kernel_id),
 													),
@@ -205,6 +172,7 @@ func (kl *KernelList) Render() app.UI {
 														Body(
 															app.Div().
 																Class("pf-v5-l-flex pf-m-column pf-m-space-items-none").
+																Style("padding", "8px 0px 0px 0px").
 																Body(
 																	app.Div().
 																		Class("pf-v5-l-flex pf-m-column").
@@ -212,7 +180,7 @@ func (kl *KernelList) Render() app.UI {
 																			app.P().
 																				Text("Kernel "+kernel_id).
 																				Style("font-weight", "bold").
-																				Style("font-size", "16px"),
+																				Style("font-size", "20px"),
 																		),
 																),
 															app.Div().
