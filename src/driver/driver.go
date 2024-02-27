@@ -10,6 +10,7 @@ import (
 	"github.com/scusemua/djn-workload-driver/m/v2/src/config"
 	"github.com/scusemua/djn-workload-driver/m/v2/src/domain"
 	"github.com/scusemua/djn-workload-driver/m/v2/src/providers"
+	"github.com/scusemua/djn-workload-driver/m/v2/src/proxy"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -92,9 +93,8 @@ func (d *workloadDriverImpl) DialGatewayGRPC(gatewayAddress string) error {
 		// p.logger.Info(fmt.Sprintf("Attempting to dial Gateway gRPC server now. Address: %s\n", p.gatewayAddress))
 		app.Logf("Attempting to dial Gateway gRPC server now. Address: %s\n", gatewayAddress)
 
-		ctx, cancel := context.WithTimeout(context.TODO(), time.Second*3)
-		defer cancel()
-		conn, err := grpc.DialContext(ctx, gatewayAddress, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
+		webSocketProxyClient := proxy.NewWebSocketProxyClient(time.Minute)
+		conn, err := grpc.Dial("ws://"+gatewayAddress, grpc.WithContextDialer(webSocketProxyClient.Dialer), grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 		if err != nil {
 			// p.logger.Error(fmt.Sprintf("Failed to dial Gateway gRPC server. Address: %s. Error: %v.\n", p.gatewayAddress, zap.Error(err)))
 			app.Logf("Failed to dial Gateway gRPC server. Address: %s. Error: %v.\n", gatewayAddress, zap.Error(err))

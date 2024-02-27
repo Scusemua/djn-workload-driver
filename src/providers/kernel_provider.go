@@ -9,6 +9,7 @@ import (
 	cmap "github.com/orcaman/concurrent-map/v2"
 	gateway "github.com/scusemua/djn-workload-driver/m/v2/api/proto"
 	"github.com/scusemua/djn-workload-driver/m/v2/src/domain"
+	"github.com/scusemua/djn-workload-driver/m/v2/src/proxy"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -67,9 +68,8 @@ func (p *BaseKernelProvider) DialGatewayGRPC(gatewayAddress string) error {
 		// p.logger.Info(fmt.Sprintf("Attempting to dial Gateway gRPC server now. Address: %s\n", p.gatewayAddress))
 		app.Logf("Attempting to dial Gateway gRPC server now. Address: %s\n", gatewayAddress)
 
-		ctx, cancel := context.WithTimeout(context.TODO(), time.Second*3)
-		defer cancel()
-		conn, err := grpc.DialContext(ctx, gatewayAddress, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
+		webSocketProxyClient := proxy.NewWebSocketProxyClient(time.Minute)
+		conn, err := grpc.Dial("ws://"+gatewayAddress, grpc.WithContextDialer(webSocketProxyClient.Dialer), grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 		if err != nil {
 			// p.logger.Error(fmt.Sprintf("Failed to dial Gateway gRPC server. Address: %s. Error: %v.\n", p.gatewayAddress, zap.Error(err)))
 			app.Logf("Failed to dial Gateway gRPC server. Address: %s. Error: %v.\n", gatewayAddress, zap.Error(err))
@@ -163,8 +163,10 @@ func (p *BaseKernelProvider) RefreshResources() {
 
 	app.Log("Kernel Querier is refreshing kernels now.")
 	resp, err := p.rpcClient.ListKernels(context.TODO(), &gateway.Void{})
-	if err != nil {
+	if err != nil || resp == nil {
+		app.Logf("[ERROR] Failed to fetch list of active kernels from the Cluster Gateway: %v.", err)
 		p.errorHandler.HandleError(err, "Failed to fetch list of active kernels from the Cluster Gateway.")
+		return
 	}
 
 	// Clear the current kernels.

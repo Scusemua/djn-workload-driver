@@ -1,8 +1,8 @@
 package config
 
 import (
+	"encoding/json"
 	"flag"
-	"fmt"
 	"path/filepath"
 
 	"k8s.io/client-go/util/homedir"
@@ -25,8 +25,13 @@ type Configuration struct {
 	Valid bool `json:"Valid"` // Used to determine if the struct was sent/received correctly over the network.
 }
 
-func (opts *Configuration) String() string {
-	return fmt.Sprintf("Configuration[SpoofCluster=%v,InCluster=%v,KernelQueryInterval='%s',NodeQueryInterval='%s',KubeConfig='%s']", opts.SpoofCluster, opts.InCluster, opts.KernelQueryInterval, opts.NodeQueryInterval, opts.KubeConfig)
+func (c *Configuration) String() string {
+	out, err := json.MarshalIndent(c, "", "  ")
+	if err != nil {
+		panic(err)
+	}
+
+	return string(out)
 }
 
 func GetConfiguration() *Configuration {

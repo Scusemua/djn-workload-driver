@@ -24,7 +24,7 @@ func NewConfigHttpHandler(opts *config.Configuration) *ConfigHttpHandler {
 	}
 	handler.BackendHttpHandler = handler
 
-	handler.Logger.Info("Creating server-side ConfigHttpHandler.", zap.String("options", opts.String()))
+	handler.Logger.Info(fmt.Sprintf("Creating server-side ConfigHttpHandler.\nOptions: %s", opts))
 
 	return handler
 }

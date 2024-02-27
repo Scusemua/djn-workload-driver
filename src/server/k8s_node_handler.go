@@ -33,7 +33,7 @@ func NewKubeNodeHttpHandler(opts *config.Configuration) *KubeNodeHttpHandler {
 	}
 	handler.BackendHttpHandler = handler
 
-	handler.Logger.Info("Creating server-side KubeNodeHttpHandler.", zap.String("options", opts.String()))
+	handler.Logger.Info("Creating server-side KubeNodeHttpHandler.")
 
 	if opts.InCluster {
 		// creates the in-cluster config

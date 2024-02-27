@@ -17,8 +17,10 @@ import (
 	"nhooyr.io/websocket/wsjson"
 )
 
-const (
-	DefaultGatewayAddress = "127.0.0.1:9000"
+var (
+	// This will be updated once we receive the configuration file.
+	// Specifically, it will be set to whatever the GatewayAddress configuration parameter is.
+	DefaultGatewayAddress string = "127.0.0.1:9000"
 )
 
 type MigrateButtonClickedHandler func(app.Context, app.Event, *gateway.JupyterKernelReplica)
@@ -110,8 +112,6 @@ func (w *MainWindow) getConfigFromBackend(ctx app.Context) {
 		}
 	}
 
-	app.Logf("Received configuration from the backend: %v", opts)
-
 	ctx.Dispatch(func(ctx app.Context) {
 		w.onConfigReceived(&opts)
 	})
@@ -119,6 +119,10 @@ func (w *MainWindow) getConfigFromBackend(ctx app.Context) {
 
 // Called when we receive the configuration from the backend.
 func (w *MainWindow) onConfigReceived(opts *config.Configuration) {
+	app.Logf(fmt.Sprintf("Received configuration:\n%s", opts.String()))
+
+	DefaultGatewayAddress = opts.GatewayAddress
+
 	driver := driver.NewWorkloadDriver(w, opts)
 	w.WorkloadDriver = driver
 	w.ConfigurationReceived = true
@@ -163,10 +167,6 @@ func (w *MainWindow) onAlertClosed(alertId string, ctx app.Context, evt app.Even
 	w.Alerts.Delete(alertId)
 	w.Update()
 }
-
-// func (w *MainWindow) SetWorkloadDriver(driver domain.WorkloadDriver) {
-// 	w.WorkloadDriver = driver
-// }
 
 func (w *MainWindow) recover() {
 	w.err = nil
@@ -353,12 +353,11 @@ func (w *MainWindow) getPreGatewayConnectionUI() app.UI {
 							Style("font-size", "16px").
 							OnClick(func(ctx app.Context, e app.Event) {
 								if w.GatewayAddress == "" {
-									w.HandleError(domain.ErrEmptyGatewayAddr, "Cluster Gateway IP address cannot be the empty string.")
-								} else {
-									// w.logger.Info(fmt.Sprintf("Connect clicked! Attempting to connect to Gateway (via gRPC) at %s now...", w.GatewayAddress))
-									app.Logf("Connect clicked! Attempting to connect to Gateway (via gRPC) at %s now...", w.GatewayAddress)
-									go w.connectButtonHandler()
+									w.GatewayAddress = DefaultGatewayAddress
 								}
+
+								app.Logf("Connect clicked! Attempting to connect to Gateway (via gRPC) at %s now...", w.GatewayAddress)
+								go w.connectButtonHandler()
 							}),
 					),
 			)
@@ -467,9 +466,6 @@ func (w *MainWindow) getUI() app.UI {
 
 // The Render method is where the component appearance is defined.
 func (w *MainWindow) Render() app.UI {
-	app.Logf("Rendering MainWindow (%p). ConfigurationReceived: %v. WorkloadDriver: %v.", w, w.ConfigurationReceived, w.WorkloadDriver)
-
-	// linkClass := "link heading fit unselectable"
 	return app.Div().Body(
 		app.Div().
 			Class("pf-v5-c-page").
