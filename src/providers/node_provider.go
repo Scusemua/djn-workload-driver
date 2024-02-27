@@ -2,7 +2,6 @@ package providers
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -186,10 +185,6 @@ func (p *BaseNodeProvider) RefreshResources() {
 	p.nodes.Clear()
 	for nodeName, node := range nodes {
 		p.nodes.Set(nodeName, node)
-	}
-
-	for kv := range p.nodes.IterBuffered() {
-		app.Log(fmt.Sprintf("Discovered active node %s: %s", kv.Key, kv.Val.String()))
 	}
 
 	p.refreshOccurred()

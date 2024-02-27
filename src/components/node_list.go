@@ -25,10 +25,11 @@ type NodeList struct {
 
 func NewNodeList(workloadDriver domain.WorkloadDriver, errorHandler domain.ErrorHandler, radioButtonsVisible bool, onNodeSelected func(*domain.KubernetesNode)) *NodeList {
 	nodeList := &NodeList{
-		id:             fmt.Sprintf("NodeList-%s", uuid.New().String()[0:26]),
-		onNodeSelected: onNodeSelected,
-		workloadDriver: workloadDriver,
-		errorHandler:   errorHandler,
+		id:                  fmt.Sprintf("NodeList-%s", uuid.New().String()[0:26]),
+		onNodeSelected:      onNodeSelected,
+		workloadDriver:      workloadDriver,
+		errorHandler:        errorHandler,
+		radioButtonsVisible: radioButtonsVisible,
 	}
 
 	nodeList.Nodes = workloadDriver.NodeProvider().Resources()
