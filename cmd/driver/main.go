@@ -61,6 +61,9 @@ func main() {
 		Icon: app.Icon{
 			SVG: "/web/icon.svg",
 		},
+		// Scripts: []string{
+		// 	"/web/empty.mjs",
+		// },
 		// Version: "0.0.1", // Auto-generated in order to trigger pwa update on a local development system.
 	})
 

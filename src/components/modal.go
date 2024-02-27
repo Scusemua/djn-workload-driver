@@ -31,7 +31,7 @@ func handleCancel(clear func(), dirty bool, cancel func(bool, chan struct{})) {
 }
 
 func (c *Modal) Render() app.UI {
-	classes := "pf-v5-c-modal-box pf-m-modal pf-m-sm"
+	classes := "pf-v5-c-modal-box pf-m-modal pf-m-md"
 	if c.Class != "" {
 		classes += " " + c.Class
 	}
@@ -40,7 +40,7 @@ func (c *Modal) Render() app.UI {
 		Class("pf-v5-c-backdrop").
 		Body(
 			app.Div().
-				Class("pf-l-bullseye").
+				Class("pf-v5-l-bullseye").
 				OnClick(func(ctx app.Context, e app.Event) {
 					// Close if we clicked outside the modal
 					if e.Get("currentTarget").Call("isSameNode", e.Get("target")).Bool() {
@@ -58,19 +58,20 @@ func (c *Modal) Render() app.UI {
 							Class(classes).
 							TabIndex(-1).
 							Body(
-								app.Button().
-									Aria("disabled", "false").
-									Aria("label", "Close").
-									Class("pf-v5-c-button pf-m-plain").
-									Type("button").
-									OnClick(func(ctx app.Context, e app.Event) {
-										c.OnClose()
-									}).
-									Body(
-										app.I().
-											Class("fas fa-times").
-											Aria("hidden", true),
-									),
+								app.Div().Class("pf-v5-c-modal-box__close").Body(
+									app.Button().
+										Aria("disabled", "false").
+										Aria("label", "Close").
+										Class("pf-v5-c-button pf-m-plain").
+										Type("button").
+										OnClick(func(ctx app.Context, e app.Event) {
+											c.OnClose()
+										}).
+										Body(
+											app.I().
+												Class("fas fa-times").
+												Aria("hidden", true),
+										)),
 								app.Header().
 									Class("pf-v5-c-modal-box__header").
 									Body(
@@ -88,7 +89,7 @@ func (c *Modal) Render() app.UI {
 														),
 												),
 												app.Span().
-													Class("pf-u-screen-reader").
+													Class("pf-v5-screen-reader").
 													Text(c.Title),
 												app.Span().
 													Class("pf-v5-c-modal-box__title-text").

@@ -29,7 +29,7 @@ func NewKernelReplicaRow(replica *gateway.JupyterKernelReplica, onMigrateButtonC
 }
 
 func (krr *KernelReplicaRow) Render() app.UI {
-	return app.Tr().Role("row").Body(
+	return app.Tr().Role("row").Class("pf-v5-c-table__tr").Body(
 		app.Td().Role("cell").Body(
 			app.Span().Text(krr.Replica.GetReplicaId()),
 		),
@@ -40,7 +40,9 @@ func (krr *KernelReplicaRow) Render() app.UI {
 			app.Span().Text(krr.Replica.GetNodeId()),
 		),
 		app.Td().Role("cell").Body(
-			app.Button().Class("pf-v5-c-button pf-m-control pf-m-small").Type("button").Text("Migrate").OnClick(func(ctx app.Context, e app.Event) {
+			// pf-v5-c-button pf-m-link pf-m-inline
+			// pf-v5-c-button pf-m-control pf-m-small
+			app.Button().Class("pf-v5-c-button pf-m-link pf-m-inline").Type("button").Text("Migrate").OnClick(func(ctx app.Context, e app.Event) {
 				krr.onMigrateButtonClickedHandler(ctx, e, krr.Replica)
 			}, fmt.Sprintf("%p", krr.Replica)),
 		),

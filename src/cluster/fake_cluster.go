@@ -2,12 +2,13 @@ package cluster
 
 import (
 	gateway "github.com/scusemua/djn-workload-driver/m/v2/api/proto"
+	"github.com/scusemua/djn-workload-driver/m/v2/src/domain"
 	"go.uber.org/zap"
 )
 
 // Spoof a Gateway Cluster for testing.
 type FakeCluster struct {
-	Nodes   []*gateway.KubernetesNode
+	Nodes   []*domain.KubernetesNode
 	Kernels []*gateway.DistributedJupyterKernel
 
 	logger *zap.Logger
@@ -15,7 +16,7 @@ type FakeCluster struct {
 
 func NewFakeCluster() *FakeCluster {
 	cluster := &FakeCluster{
-		Nodes:   make([]*gateway.KubernetesNode, 0),
+		Nodes:   make([]*domain.KubernetesNode, 0),
 		Kernels: make([]*gateway.DistributedJupyterKernel, 0),
 	}
 

@@ -44,6 +44,7 @@ func (c *ErrorModal) Render() app.UI {
 								Rows(len(strings.Split(c.Error.Error(), "\n"))).
 								Style("width", "100%").
 								Style("resize", "vertical").
+								Style("height", "200px").
 								Style("border", "0").
 								Class("pf-v5-c-form-control").
 								ReadOnly(true).

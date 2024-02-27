@@ -47,13 +47,13 @@ func NewKernelStatusLabel(status string, fontSize int) *KernelStatusLabel {
 
 func (ks *KernelStatusLabel) Render() app.UI {
 	return app.Div().
-		Class("pf-l-flex pf-m-space-items-xs").
+		Class("pf-v5-l-flex pf-m-space-items-xs").
 		Body(
 			app.Div().
-				Class("pf-l-flex pf-m-space-items-xs").
+				Class("pf-v5-l-flex pf-m-space-items-xs").
 				Body(
 					app.Div().
-						Class("pf-l-flex__item").
+						Class("pf-v5-l-flex__item").
 						Body(
 							app.I().
 								Class(getIconForKernelStatusLabel(ks.status)).
@@ -61,7 +61,7 @@ func (ks *KernelStatusLabel) Render() app.UI {
 								Aria("hidden", true),
 						),
 					app.Div().
-						Class("pf-l-flex__item").
+						Class("pf-v5-l-flex__item").
 						Body(
 							app.Span().
 								Text(ks.status).

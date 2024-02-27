@@ -60,14 +60,14 @@ type NodeProvider interface {
 type KubernetesNode struct {
 	NodeId          string   `json:"Nodes"`
 	Pods            []string `json:"Pods"`
-	CapacityCPU     int64    `json:"CapacityCPU"`
-	CapacityMemory  int64    `json:"CapacityMemory"`
-	CapacityGPUs    int64    `json:"CapacityGPUs"`
-	CapacityVGPUs   int64    `json:"CapacityVGPUs"`
-	AllocatedCPU    int64    `json:"AllocatedCPU"`
-	AllocatedMemory int64    `json:"AllocatedMemory"`
-	AllocatedGPUs   int64    `json:"AllocatedGPUs"`
-	AllocatedVGPUs  int64    `json:"AllocatedVGPUs"`
+	CapacityCPU     float64  `json:"CapacityCPU"`
+	CapacityMemory  float64  `json:"CapacityMemory"`
+	CapacityGPUs    float64  `json:"CapacityGPUs"`
+	CapacityVGPUs   float64  `json:"CapacityVGPUs"`
+	AllocatedCPU    float64  `json:"AllocatedCPU"`
+	AllocatedMemory float64  `json:"AllocatedMemory"`
+	AllocatedGPUs   float64  `json:"AllocatedGPUs"`
+	AllocatedVGPUs  float64  `json:"AllocatedVGPUs"`
 }
 
 func (kn *KubernetesNode) String() string {

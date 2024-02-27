@@ -38,22 +38,25 @@ func (w *MainWindow) OnAppUpdate(ctx app.Context) {
 	w.updateAvailable = ctx.AppUpdateAvailable() // Reports that an app update is available.
 
 	w.addAlert(&Alert{
-		ID:            uuid.New().String(),
-		Name:          "Update Available",
-		Class:         "pf-v5-c-alert pf-m-info",
-		IconClass:     "fas fa-fw fa-info-circle",
-		Title:         "Update Available",
-		Description:   "There is a website update available.",
-		ButtonText:    "Update & Refresh",
-		ButtonClass:   "pf-v5-c-button pf-m-primary update-button",
-		ButtonOnClick: w.onUpdateClick,
-		OnClose:       w.onAlertClosed,
-		HasButton:     true,
+		ID:               uuid.New().String(),
+		Name:             "Update Available",
+		Class:            "pf-v5-c-alert pf-m-info",
+		IconWrapperClass: "pf-v5-c-alert__icon",
+		IconClass:        "fas fa-fw fa-info-circle",
+		Title:            "Update Available",
+		Description:      "There is a website update available.",
+		ButtonText:       "Update & Refresh",
+		ButtonClass:      "pf-v5-c-button pf-m-link pf-m-inline",
+		ButtonOnClick:    w.onUpdateClick,
+		OnClose:          w.onAlertClosed,
+		HasButton:        true,
 	})
 }
 
 func (w *MainWindow) onAlertClosed(alertId string, ctx app.Context, evt app.Event) {
-
+	app.Logf("Closing alert \"%s\" now.", alertId)
+	w.Alerts.Delete(alertId)
+	w.Update()
 }
 
 func (w *MainWindow) SetWorkloadDriver(driver domain.WorkloadDriver) {
@@ -73,7 +76,6 @@ func (w *MainWindow) HandleError(err error, errMsg string) {
 }
 
 func (w *MainWindow) onUpdateClick(alertId string, ctx app.Context, e app.Event) {
-	w.onAlertClosed(alertId, ctx, e)
 	// Reloads the page to display the modifications.
 	ctx.Reload()
 }
@@ -165,7 +167,7 @@ func (w *MainWindow) Render() app.UI {
 															Style("content", "url(\"/web/icons/cloud-disconnected.svg\")").
 															Style("color", "#203250").
 															Style("font-size", "136px").
-															Style("margin-bottom", "-16px").
+															Style("margin-bottom", "-32px").
 															Aria("hidden", true),
 														app.H1().
 															Class("pf-v5-c-title pf-m-lg").
@@ -176,13 +178,14 @@ func (w *MainWindow) Render() app.UI {
 														app.Div().
 															Class("pf-v5-c-empty-state__body").
 															Text("To start, please enter the IP address and port of the Cluster Gateway gRPC server and press Connect."),
+														app.Div().ID("hello").Body(),
 														app.Div().Class("pf-v5-c-form").Body(
 															app.Div().
 																Class("pf-v5-c-form__group").
+																Style("margin-bottom", "8px").
 																Body(
 																	app.Div().
 																		Class("pf-v5-c-form__group").
-																		Style("margin-bottom", "2px").
 																		Body(
 																			app.Label().
 																				Class("pf-v5-c-form__label").
@@ -313,10 +316,10 @@ func (w *MainWindow) Render() app.UI {
 																	)),
 														)),
 											app.Div().Class("pf-v5-l-grid pf-m-gutter").Body(
-												app.Div().Class("pf-v5-l-grid__item pf-m-gutter pf-m-4-col-on-lg pf-m-3-col-on-2xl").Body(
+												app.Div().Class("pf-v5-l-grid__item pf-m-gutter pf-m-5-col").Body(
 													NewKernelList(w.workloadDriver, w, w.onMigrateButtonClicked),
 												),
-												app.Div().Class("pf-v5-l-grid__item pf-m-gutter pf-m-4-col-on-lg pf-m-6-col-on-2xl").Body(
+												app.Div().Class("pf-v5-l-grid__item pf-m-gutter pf-m-4-col").Body(
 													NewNodeList(w.workloadDriver, w, false, func(kn *domain.KubernetesNode) { /* Do nothing */ }),
 												),
 											)),
@@ -360,8 +363,8 @@ func (w *MainWindow) Render() app.UI {
 							},
 						})),
 			),
-		&AlertList{
+		app.If(w.Alerts.Len() > 0, &AlertList{
 			Alerts: w.Alerts,
-		},
+		}),
 	)
 }

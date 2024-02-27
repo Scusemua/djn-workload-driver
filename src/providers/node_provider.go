@@ -172,7 +172,7 @@ func (p *BaseNodeProvider) RefreshResources() {
 
 	ctxRead, cancelRead := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancelRead()
-	var nodes map[string]domain.KubernetesNode
+	var nodes map[string]*domain.KubernetesNode
 	err = wsjson.Read(ctxRead, c, &nodes)
 	c.Close(websocket.StatusNormalClosure, "")
 	if err != nil {
@@ -185,8 +185,11 @@ func (p *BaseNodeProvider) RefreshResources() {
 	// Clear the current nodes.
 	p.nodes.Clear()
 	for nodeName, node := range nodes {
-		p.nodes.Set(nodeName, &node)
-		app.Log(fmt.Sprintf("Discovered active node: %s", node.String()))
+		p.nodes.Set(nodeName, node)
+	}
+
+	for kv := range p.nodes.IterBuffered() {
+		app.Log(fmt.Sprintf("Discovered active node %s: %s", kv.Key, kv.Val.String()))
 	}
 
 	p.refreshOccurred()
