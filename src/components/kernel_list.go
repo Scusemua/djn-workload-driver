@@ -24,17 +24,28 @@ type KernelList struct {
 	errorHandler   domain.ErrorHandler
 	expanded       map[string]bool
 	selected       map[string]bool
+	numSelected    int
 
-	onMigrateButtonClicked MigrateButtonClickedHandler
+	onCreateKernelClicked                   CreateKernelButtonClickedHandler             // Handler for clicking the 'Create Kernel' button.
+	onTerminateSpecificKernelButtonClicked  TerminateSpecificKernelButtonClickedHandler  // Handler for clicking the 'Terminate' button for a single, specific kernel.
+	onExecuteKernelButtonClicked            ExecuteKernelButtonClickedHandler            // Handler for clicking the 'Execute' button for a specific kernel (but not a specific replica).
+	onTerminateSelectedKernelsButtonClicked TerminateSelectedKernelsButtonClickedHandler // Handler for clicking the 'Terminate Selected Kernels' button.
+	onMigrateButtonClicked                  MigrateButtonClickedHandler                  // Handler for clicking the 'Migrate' button for a specific replica of a specific kernel.
+	onExecuteReplicaButtonClicked           ExecuteReplicaButtonClickedHandler           // Handler for clicking the 'Execute' button for a specific replica of a specific kernel.
 }
 
-func NewKernelList(kernelProvider domain.KernelProvider, errorHandler domain.ErrorHandler, onMigrateButtonClicked MigrateButtonClickedHandler) *KernelList {
+func NewKernelList(kernelProvider domain.KernelProvider, errorHandler domain.ErrorHandler, migrateButtonClickedHandler MigrateButtonClickedHandler, executeKernelButtonClickedHandler ExecuteKernelButtonClickedHandler, executeReplicaButtonClickedHandler ExecuteReplicaButtonClickedHandler, createKernelButtonClickedHandler CreateKernelButtonClickedHandler, terminateSelectedKernelsButtonClickedHandler TerminateSelectedKernelsButtonClickedHandler, terminateSpecificKernelButtonClickedHandler TerminateSpecificKernelButtonClickedHandler) *KernelList {
 	kl := &KernelList{
-		id:                     fmt.Sprintf("KernelList-%s", uuid.New().String()[0:26]),
-		kernelProvider:         kernelProvider,
-		errorHandler:           errorHandler,
-		onMigrateButtonClicked: onMigrateButtonClicked,
-		selected:               make(map[string]bool),
+		id:                                      fmt.Sprintf("KernelList-%s", uuid.New().String()[0:26]),
+		kernelProvider:                          kernelProvider,
+		errorHandler:                            errorHandler,
+		onMigrateButtonClicked:                  migrateButtonClickedHandler,
+		onExecuteReplicaButtonClicked:           executeReplicaButtonClickedHandler,
+		onCreateKernelClicked:                   createKernelButtonClickedHandler,
+		onTerminateSelectedKernelsButtonClicked: terminateSelectedKernelsButtonClickedHandler,
+		onTerminateSpecificKernelButtonClicked:  terminateSpecificKernelButtonClickedHandler,
+		onExecuteKernelButtonClicked:            executeKernelButtonClickedHandler,
+		selected:                                make(map[string]bool),
 	}
 
 	kl.recreateState(kernelProvider.Resources())
@@ -48,6 +59,7 @@ func (kl *KernelList) recreateState(kernels []*gateway.DistributedJupyterKernel)
 		return kernels[i].KernelId < kernels[j].KernelId
 	})
 
+	numSelected := 0
 	refreshedSelected := make(map[string]bool, len(kernels))
 	refreshedExpanded := make(map[string]bool, len(kernels))
 	refreshedKernels := make(map[string]*gateway.DistributedJupyterKernel, len(kernels))
@@ -56,6 +68,7 @@ func (kl *KernelList) recreateState(kernels []*gateway.DistributedJupyterKernel)
 		var selected, expanded, ok bool
 		if selected, ok = kl.selected[kernel.KernelId]; ok {
 			refreshedSelected[kernel.KernelId] = selected
+			numSelected++
 		} else {
 			selected = false
 			refreshedSelected[kernel.KernelId] = false
@@ -70,11 +83,13 @@ func (kl *KernelList) recreateState(kernels []*gateway.DistributedJupyterKernel)
 
 		refreshedKernels[kernel.KernelId] = kernel
 	}
+
 	// Assign at the end so we can use existing values in 'expanded' to set the new values of 'expanded'.
 	// Like, any already-expanded entries in the list should remain expanded after we add the refreshed kernels.
 	kl.expanded = refreshedExpanded
 	kl.selected = refreshedSelected
 	kl.Kernels = refreshedKernels
+	kl.numSelected = numSelected
 }
 
 func (kl *KernelList) handleKernelsRefresh(kernels []*gateway.DistributedJupyterKernel) bool {
@@ -104,14 +119,57 @@ func (kl *KernelList) Render() app.UI {
 	// We're gonna use this a lot here.
 	kernels := kl.Kernels
 
-	// app.Logf("\n[%p] Rendering KernelList with %d kernels.", kl, len(kernels))
+	app.Logf("\n[%p] Rendering KernelList with %d kernels. NumSelected: %d.", kl, len(kernels), kl.numSelected)
 
 	return app.Div().
 		Class("pf-v5-c-card pf-m-expanded").
 		Body(
 			app.Div().Class("pf-v5-c-card__header").Body(
 				app.Div().Class("pf-v5-c-card__title").Body(
-					app.H2().Class("pf-v5-c-title pf-m-xl").Text("Active Kernels"),
+					app.H2().Class("pf-v5-c-title pf-m-2xl").Text("Active Kernels"),
+				),
+				app.Div().Class("pf-v5-c-card__actions pf-m-no-offset").Body(
+					app.Button().
+						Class("pf-v5-c-button pf-m-inline pf-m-secondary").
+						Type("button").
+						Text("Create Kernel").
+						Style("font-size", "16px").
+						Style("margin-right", "16px").
+						OnClick(func(ctx app.Context, e app.Event) {
+							e.StopImmediatePropagation()
+							app.Log("Creating a new Kernel.")
+							go kl.onCreateKernelClicked(ctx, e)
+						}),
+					app.Button().
+						Class("pf-v5-c-button pf-m-inline pf-m-secondary").
+						Type("button").
+						Text("Refresh Kernels").
+						Style("font-size", "16px").
+						Style("margin-right", "16px").
+						OnClick(func(ctx app.Context, e app.Event) {
+							e.StopImmediatePropagation()
+							app.Log("Refreshing kernels in kernel list.")
+							go kl.kernelProvider.RefreshResources()
+						}),
+					app.Button().
+						Class("pf-v5-c-button pf-m-inline pf-m-secondary pf-m-danger").
+						Type("button").
+						Text("Terminate Selected Kernels").
+						Style("font-size", "16px").
+						Disabled(kl.numSelected == 0).
+						OnClick(func(ctx app.Context, e app.Event) {
+							e.StopImmediatePropagation()
+
+							var selected []*gateway.DistributedJupyterKernel = make([]*gateway.DistributedJupyterKernel, kl.numSelected)
+
+							for kernelId, isSelected := range kl.selected {
+								if isSelected {
+									selected = append(selected, kl.Kernels[kernelId])
+								}
+							}
+
+							go kl.onTerminateSelectedKernelsButtonClicked(ctx, e, selected)
+						}),
 				),
 			),
 			app.Div().Class("pf-v5-c-card__body").Body(
@@ -159,10 +217,14 @@ func (kl *KernelList) Render() app.UI {
 															kl.selected[kernel_id] = !kl.selected[kernel_id]
 
 															if kl.selected[kernel_id] {
-																app.Logf("Kernel %s should be selected now.", kernel_id)
+																kl.numSelected++
+																app.Logf("Kernel %s should be selected now. NumSelected: %d.", kernel_id, kl.numSelected)
 															} else {
-																app.Logf("Kernel %s should be deselected now.", kernel_id)
+																kl.numSelected--
+																app.Logf("Kernel %s should be deselected now. NumSelected: %d.", kernel_id, kl.numSelected)
 															}
+
+															kl.Update()
 														}),
 													),
 												),
@@ -194,10 +256,22 @@ func (kl *KernelList) Render() app.UI {
 														Class("pf-v5-c-data-list__cell pf-m-align-right pf-m-no-fill").
 														Body(
 															app.Button().
+																Class("pf-v5-c-button pf-m-secondary").
+																Type("button").
+																Text("Execute").
+																Style("font-size", "16px").
+																Style("margin-right", "16px").
+																OnClick(func(ctx app.Context, e app.Event) {
+																	go kl.onExecuteKernelButtonClicked(ctx, e, kernels[kernel_id])
+																}),
+															app.Button().
 																Class("pf-v5-c-button pf-m-secondary pf-m-danger").
 																Type("button").
 																Text("Terminate").
-																Style("font-size", "16px"),
+																Style("font-size", "16px").
+																OnClick(func(ctx app.Context, e app.Event) {
+																	go kl.onTerminateSpecificKernelButtonClicked(ctx, e, kernels[kernel_id])
+																}),
 														),
 												),
 										),
@@ -211,20 +285,21 @@ func (kl *KernelList) Render() app.UI {
 														// 	app.Input().Type("checkbox").Name("check-all"),
 														// ),
 														app.Th().Class("pf-v5-c-table__th").Role("columnheader").Scope("col").Body(
-															app.P().Text("Replica ID"),
+															app.P().Text("ID"),
 														),
 														app.Th().Class("pf-v5-c-table__th").Role("columnheader").Scope("col").Body(
-															app.P().Text("Pod Name"),
+															app.P().Text("Pod"),
 														),
 														app.Th().Class("pf-v5-c-table__th").Role("columnheader").Scope("col").Body(
-															app.P().Text("Node Name"),
+															app.P().Text("Node"),
 														),
+														app.Td().Class("pf-v5-c-table__td"),
 														app.Td().Class("pf-v5-c-table__td"),
 													),
 												),
 												app.TBody().Role("rowgroup").Body(
 													app.Range(kernels[kernel_id].GetReplicas()).Slice(func(j int) app.UI {
-														return NewKernelReplicaRow(kernels[kernel_id].GetReplicas()[j], kl.onMigrateButtonClicked, kl.errorHandler)
+														return NewKernelReplicaRow(kernels[kernel_id].GetReplicas()[j], kl.onMigrateButtonClicked, kl.onExecuteReplicaButtonClicked, kl.errorHandler)
 													},
 													),
 												),

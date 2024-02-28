@@ -24,6 +24,11 @@ var (
 )
 
 type MigrateButtonClickedHandler func(app.Context, app.Event, *gateway.JupyterKernelReplica)
+type ExecuteReplicaButtonClickedHandler func(app.Context, app.Event, *gateway.JupyterKernelReplica)
+type ExecuteKernelButtonClickedHandler func(app.Context, app.Event, *gateway.DistributedJupyterKernel)
+type CreateKernelButtonClickedHandler func(app.Context, app.Event)
+type TerminateSpecificKernelButtonClickedHandler func(app.Context, app.Event, *gateway.DistributedJupyterKernel)
+type TerminateSelectedKernelsButtonClickedHandler func(app.Context, app.Event, []*gateway.DistributedJupyterKernel)
 
 type MainWindow struct {
 	app.Compo
@@ -33,12 +38,17 @@ type MainWindow struct {
 	ConfigurationReceived bool                                   // Flag indicating whether we've received the configuration from the server.
 	WorkloadDriver        domain.WorkloadDriver                  // The Workload Driver.
 
-	configuration     *config.Configuration         // The system configuration sent to us by the backend server.
-	errMsg            string                        // Current error message.
-	err               error                         // Current operational error.
-	updateAvailable   bool                          // Field that reports whether an app update is available. False by default.
-	replicaToMigrate  *gateway.JupyterKernelReplica // The replica for which the user has clicked the 'Migrate' button.
-	migarateModalOpen bool                          // Indicates whether the MigrateModal should be open. If it is true, then the migrate modal will be displayed.
+	configuration   *config.Configuration // The system configuration sent to us by the backend server.
+	errMsg          string                // Current error message.
+	err             error                 // Current operational error.
+	updateAvailable bool                  // Field that reports whether an app update is available. False by default.
+
+	replicaToMigrate        *gateway.JupyterKernelReplica     // The replica for which the user has clicked the 'Migrate' button.
+	replicaToExecute        *gateway.JupyterKernelReplica     // The replica for which the user has clicked the 'Execute' button.
+	kernelToExecute         *gateway.DistributedJupyterKernel // The kernel for which the user has clicked the 'Execute' button.
+	migarateModalOpen       bool                              // Indicates whether the MigrateModal should be open. If it is true, then the modal will be displayed.
+	executeReplicaModalOpen bool                              // Indicates whether the ExecuteReplicaModal should be open. If it is true, then the modal will be displayed.
+	executeKernelModalOpen  bool                              // Indicates whether the ExecuteReplicaModal should be open. If it is true, then the modal will be displayed.
 }
 
 func NewMainWindow(gatewayAddress string) *MainWindow {
@@ -194,11 +204,39 @@ func (w *MainWindow) connectButtonHandler() {
 	}()
 }
 
+func (w *MainWindow) onCreateKernelButtonClicked(ctx app.Context, e app.Event) {
+	app.Log("'Create Kernel' button clicked.")
+}
+
+func (w *MainWindow) onTerminateSelectedKernelsButtonClicked(ctx app.Context, e app.Event, selectedKernels []*gateway.DistributedJupyterKernel) {
+	app.Logf("'Terminate Selected Kernels' button clicked. NumSelected: %d.", len(selectedKernels))
+}
+
+func (w *MainWindow) onTerminateSpecificKernelButtonClicked(ctx app.Context, e app.Event, selectedKernel *gateway.DistributedJupyterKernel) {
+	app.Logf("'Terminate Specific Kernel' button clicked. Kernel to terminate: %s.", selectedKernel.KernelId)
+}
+
 func (w *MainWindow) onMigrateButtonClicked(ctx app.Context, e app.Event, replica *gateway.JupyterKernelReplica) {
 	app.Logf("User wishes to migrate replica %d of kernel %s.", replica.ReplicaId, replica.KernelId)
 
 	w.migarateModalOpen = true
 	w.replicaToMigrate = replica
+}
+
+// Handler for the "Execute" button for a specific replica of a specific kernel.
+func (w *MainWindow) onExecuteReplicaButtonClicked(ctx app.Context, e app.Event, replica *gateway.JupyterKernelReplica) {
+	app.Logf("User wishes to execute code replica %d of kernel %s.", replica.ReplicaId, replica.KernelId)
+
+	w.executeReplicaModalOpen = true
+	w.replicaToExecute = replica
+}
+
+// Handler for the "Execute" button for a specific kernel (but not a specific replica).
+func (w *MainWindow) onExecuteKernelButtonClicked(ctx app.Context, e app.Event, kernel *gateway.DistributedJupyterKernel) {
+	app.Logf("User wishes to execute code on kernel %s.", kernel.KernelId)
+
+	w.executeKernelModalOpen = true
+	w.kernelToExecute = kernel
 }
 
 func (w *MainWindow) onMigrateSubmit(replica *gateway.JupyterKernelReplica, targetNode *domain.KubernetesNode) {
@@ -421,83 +459,34 @@ func (w *MainWindow) getPhaseThreeUI() app.UI {
 				app.Div().
 					Class("pf-v5-c-empty-state__content").
 					Body(
-						app.I().
-							Style("content", "url(\"/web/icons/cloud-connected.svg\")").
-							Style("color", "#203250").
-							Style("font-size", "136px").
-							Style("margin-bottom", "-16px").
-							Aria("hidden", true),
+						// app.I().
+						// 	Style("content", "url(\"/web/icons/cloud-connected.svg\")").
+						// 	Style("color", "#203250").
+						// 	Style("margin-bottom", "-32px").
+						// 	Aria("hidden", true),
 						app.H1().
-							Class("pf-v5-c-title pf-m-lg").
+							Class("pf-v5-c-title pf-m-4xl").
 							Style("font-weight", "bold").
-							Style("font-size", "24pt").
-							Style("margin-bottom", "-8px").
-							Text("Connected"),
-						app.H1().
-							Class("pf-v5-c-title pf-m-lg").
-							Style("font-weight", "lighter").
-							Style("font-size", "16pt").
-							Style("margin-bottom", "-8px").
-							Text(fmt.Sprintf("Cluster Gateway: %s", w.WorkloadDriver.GatewayAddress())),
-						app.Br(),
-						app.Div().
-							Body(
-								app.Div().Body(
-									app.Div().
-										Style("padding", "4px 4px 2px 2px").
-										Style("margin-bottom", "8px").
-										Body(
-											app.Button().
-												Class("pf-v5-c-button pf-m-primary").
-												Type("button").
-												Text("Refresh Kernels").
-												Style("font-size", "16px").
-												Style("margin-right", "16px").
-												OnClick(func(ctx app.Context, e app.Event) {
-													e.StopImmediatePropagation()
-													app.Log("Refreshing kernels in kernel list.")
-
-													go w.WorkloadDriver.KernelProvider().RefreshResources()
-												}),
-											app.Button().
-												Class("pf-v5-c-button pf-m-secondary").
-												Type("button").
-												Text("Refresh Nodes").
-												Style("font-size", "16px").
-												Style("margin-right", "16px").
-												OnClick(func(ctx app.Context, e app.Event) {
-													e.StopImmediatePropagation()
-													app.Log("Refreshing nodes in node list.")
-
-													go w.WorkloadDriver.NodeProvider().RefreshResources()
-												}),
-											app.Button().
-												Class("pf-v5-c-button pf-m-primary pf-m-danger").
-												Type("button").
-												Text("Terminate Selected Kernels").
-												Style("font-size", "16px").
-												OnClick(func(ctx app.Context, e app.Event) {
-													e.StopImmediatePropagation()
-
-													// kernelsToTerminate := make([]*gateway.DistributedJupyterKernel, 0, len(kernels))
-
-													// for kernel_id, selected := range kl.selected {
-													// 	if selected {
-													// 		app.Logf("Kernel %s is selected. Will be terminating it.", kernel_id)
-													// 		kernelsToTerminate = append(kernelsToTerminate, kernels[kernel_id])
-													// 	}
-													// }
-
-													// app.Logf("Terminating %d kernels now.", len(kernelsToTerminate))
-												}),
-										),
-								)),
-					)),
+							Style("margin-top", "-24px").
+							Style("margin-bottom", "-24px").
+							Text("Workload Driver Dashboard"),
+						// app.H3().
+						// 	Class("pf-v5-c-title pf-m-2xl").
+						// 	Style("font-weight", "bold").
+						// 	Style("margin-bottom", "-24px").
+						// 	Text("Connected"),
+						// app.H1().
+						// 	Class("pf-v5-c-title pf-m-lg").
+						// 	Style("font-weight", "lighter").
+						// 	Style("margin-bottom", "-8px").
+						// 	Text(fmt.Sprintf("Cluster Gateway: %s", w.GatewayAddress)),
+					),
+			),
 		app.Div().Class("pf-v5-l-grid pf-m-gutter").Body(
 			app.Div().Class("pf-v5-l-grid__item pf-m-gutter pf-m-6-col").Body(
 				app.Div().Class("pf-v5-l-flex pf-m-column pf-m-row-on-md pf-m-column-on-lg").Body(
 					app.Div().Class("pf-v5-l-grid__item pf-m-gutter pf-m-6-col").Body(
-						NewKernelList(w.WorkloadDriver.KernelProvider(), w, w.onMigrateButtonClicked),
+						NewKernelList(w.WorkloadDriver.KernelProvider(), w, w.onMigrateButtonClicked, w.onExecuteKernelButtonClicked, w.onExecuteReplicaButtonClicked, w.onCreateKernelButtonClicked, w.onTerminateSelectedKernelsButtonClicked, w.onTerminateSpecificKernelButtonClicked),
 					),
 					app.Div().Class("pf-v5-l-grid__item pf-m-gutter pf-m-6-col").Body(
 						NewKernelSpecCard(w.WorkloadDriver.KernelSpecProvider()),

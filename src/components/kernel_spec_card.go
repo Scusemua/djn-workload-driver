@@ -92,7 +92,7 @@ func (c *KernelSpecCard) Render() app.UI {
 		// Header
 		app.Div().Class("pf-v5-c-card__header").Body(
 			app.Div().Class("pf-v5-c-card__header-main").Body(
-				app.H2().Class("pf-v5-c-title pf-m-lg").Body().Text("Kernel Specs"),
+				app.H2().Class("pf-v5-c-title pf-m-2xl").Body().Text("Kernel Specs"),
 			),
 		),
 		// Tabs

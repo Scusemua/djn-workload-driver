@@ -98,7 +98,21 @@ func (nl *NodeList) Render() app.UI {
 		Body(
 			app.Div().Class("pf-v5-c-card__header").Body(
 				app.Div().Class("pf-v5-c-card__title").Body(
-					app.H2().Class("pf-v5-c-title pf-m-xl").Text("Active Kubernetes Nodes"),
+					app.H2().Class("pf-v5-c-title pf-m-2xl").Text("Active Kubernetes Nodes"),
+				),
+				app.Div().Class("pf-v5-c-card__actions pf-m-no-offset").Body(
+					app.Button().
+						Class("pf-v5-c-button pf-m-inline pf-m-secondary").
+						Type("button").
+						Text("Refresh Nodes").
+						Style("font-size", "16px").
+						Style("margin-right", "16px").
+						OnClick(func(ctx app.Context, e app.Event) {
+							e.StopImmediatePropagation()
+							app.Log("Refreshing nodes in node list.")
+
+							go nl.nodeProvider.RefreshResources()
+						}),
 				),
 			),
 			app.Div().Class("pf-v5-c-card__expandable-content").Body(

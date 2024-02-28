@@ -15,14 +15,16 @@ type KernelReplicaRow struct {
 	Replica      *gateway.JupyterKernelReplica
 	errorHandler domain.ErrorHandler
 
-	onMigrateButtonClickedHandler MigrateButtonClickedHandler
+	onExecuteButtonClicked ExecuteReplicaButtonClickedHandler
+	onMigrateButtonClicked MigrateButtonClickedHandler
 }
 
-func NewKernelReplicaRow(replica *gateway.JupyterKernelReplica, onMigrateButtonClickedHandler MigrateButtonClickedHandler, errorHandler domain.ErrorHandler) *KernelReplicaRow {
+func NewKernelReplicaRow(replica *gateway.JupyterKernelReplica, migrateButtonClickedHandler MigrateButtonClickedHandler, executeReplicaButtonClickedHandler ExecuteReplicaButtonClickedHandler, errorHandler domain.ErrorHandler) *KernelReplicaRow {
 	return &KernelReplicaRow{
-		Replica:                       replica,
-		errorHandler:                  errorHandler,
-		onMigrateButtonClickedHandler: onMigrateButtonClickedHandler,
+		Replica:                replica,
+		errorHandler:           errorHandler,
+		onMigrateButtonClicked: migrateButtonClickedHandler,
+		onExecuteButtonClicked: executeReplicaButtonClickedHandler,
 	}
 }
 
@@ -40,8 +42,15 @@ func (krr *KernelReplicaRow) Render() app.UI {
 		app.Td().Role("cell").Body(
 			// pf-v5-c-button pf-m-link pf-m-inline
 			// pf-v5-c-button pf-m-control pf-m-small
+			app.Button().Class("pf-v5-c-button pf-m-link pf-m-inline").Type("button").Text("Execute").OnClick(func(ctx app.Context, e app.Event) {
+				krr.onExecuteButtonClicked(ctx, e, krr.Replica)
+			}, fmt.Sprintf("%p", krr.Replica)),
+		),
+		app.Td().Role("cell").Body(
+			// pf-v5-c-button pf-m-link pf-m-inline
+			// pf-v5-c-button pf-m-control pf-m-small
 			app.Button().Class("pf-v5-c-button pf-m-link pf-m-inline").Type("button").Text("Migrate").OnClick(func(ctx app.Context, e app.Event) {
-				krr.onMigrateButtonClickedHandler(ctx, e, krr.Replica)
+				krr.onMigrateButtonClicked(ctx, e, krr.Replica)
 			}, fmt.Sprintf("%p", krr.Replica)),
 		),
 	)

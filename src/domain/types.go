@@ -43,9 +43,6 @@ type WorkloadDriver interface {
 
 	// Tell the Cluster Gateway to migrate a particular replica.
 	MigrateKernelReplica(*gateway.MigrationRequest) error
-
-	GatewayAddress() string // Return the address of the Cluster Gateway from which the list of kernels was retrieved.
-
 	DialGatewayGRPC(string) error // Attempt to connect to the Cluster Gateway's gRPC server using the provided address. Returns an error if connection failed, or nil on success. This should NOT be called from the UI goroutine.
 }
 
