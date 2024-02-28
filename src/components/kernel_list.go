@@ -17,7 +17,7 @@ const (
 type KernelList struct {
 	app.Compo
 
-	Kernels map[string]*gateway.DistributedJupyterKernel
+	kernels map[string]*gateway.DistributedJupyterKernel
 
 	id             string
 	kernelProvider domain.KernelProvider
@@ -48,12 +48,29 @@ func NewKernelList(kernelProvider domain.KernelProvider, errorHandler domain.Err
 		selected:                                make(map[string]bool),
 	}
 
-	kl.recreateState(kernelProvider.Resources())
+	kernelsSlice := kernelProvider.Resources()
+
+	// Create the initial state of the kernel list.
+	kernelsMap := make(map[string]*gateway.DistributedJupyterKernel, len(kernelsSlice))
+	kl.selected = make(map[string]bool, len(kernelsSlice))
+	kl.expanded = make(map[string]bool, len(kernelsSlice))
+
+	// Initially, nothing is selected or expanded.
+	for _, kernel := range kernelsSlice {
+		kl.selected[kernel.KernelId] = false
+		kl.expanded[kernel.KernelId] = false
+
+		kernelsMap[kernel.KernelId] = kernel
+	}
+
+	kl.kernels = kernelsMap
 
 	return kl
 }
 
 func (kl *KernelList) recreateState(kernels []*gateway.DistributedJupyterKernel) {
+	app.Logf("KernelList (%p) is recreating its state.", kl)
+
 	// Sort by name first.
 	sort.Slice(kernels, func(i, j int) bool {
 		return kernels[i].KernelId < kernels[j].KernelId
@@ -66,15 +83,17 @@ func (kl *KernelList) recreateState(kernels []*gateway.DistributedJupyterKernel)
 
 	for _, kernel := range kernels {
 		var selected, expanded, ok bool
-		if selected, ok = kl.selected[kernel.KernelId]; ok {
+		if selected, ok = kl.selected[kernel.KernelId]; ok && selected {
+			app.Logf("Kernel %s WAS selected before the refresh.", kernel.KernelId)
 			refreshedSelected[kernel.KernelId] = selected
 			numSelected++
 		} else {
+			app.Logf("Kernel %s was NOT selected before the refresh.", kernel.KernelId)
 			selected = false
 			refreshedSelected[kernel.KernelId] = false
 		}
 
-		if expanded, ok = kl.expanded[kernel.KernelId]; ok {
+		if expanded, ok = kl.expanded[kernel.KernelId]; ok && expanded {
 			refreshedExpanded[kernel.KernelId] = expanded
 		} else {
 			expanded = false
@@ -88,7 +107,7 @@ func (kl *KernelList) recreateState(kernels []*gateway.DistributedJupyterKernel)
 	// Like, any already-expanded entries in the list should remain expanded after we add the refreshed kernels.
 	kl.expanded = refreshedExpanded
 	kl.selected = refreshedSelected
-	kl.Kernels = refreshedKernels
+	kl.kernels = refreshedKernels
 	kl.numSelected = numSelected
 }
 
@@ -117,7 +136,7 @@ func (kl *KernelList) OnDismount(ctx app.Context) {
 
 func (kl *KernelList) Render() app.UI {
 	// We're gonna use this a lot here.
-	kernels := kl.Kernels
+	kernels := kl.kernels
 
 	app.Logf("\n[%p] Rendering KernelList with %d kernels. NumSelected: %d.", kl, len(kernels), kl.numSelected)
 
@@ -164,7 +183,7 @@ func (kl *KernelList) Render() app.UI {
 
 							for kernelId, isSelected := range kl.selected {
 								if isSelected {
-									selected = append(selected, kl.Kernels[kernelId])
+									selected = append(selected, kl.kernels[kernelId])
 								}
 							}
 
@@ -213,7 +232,9 @@ func (kl *KernelList) Render() app.UI {
 														}, kernel_id),
 													),
 													app.Div().Class("pf-v5-c-data-list__check").Body(
-														app.Input().Type("checkbox").Name(fmt.Sprintf("check-expandable-kernel-%s", kernel_id)).OnInput(func(ctx app.Context, e app.Event) {
+														app.Input().Type("checkbox").Name(fmt.Sprintf("check-expandable-kernel-%s", kernel_id)).ID(fmt.Sprintf("check-expandable-kernel-%s", kernel_id)).OnInput(func(ctx app.Context, e app.Event) {
+															app.Logf("Clicked checkbox '%s'", fmt.Sprintf("check-expandable-kernel-%s", kernel_id))
+
 															kl.selected[kernel_id] = !kl.selected[kernel_id]
 
 															if kl.selected[kernel_id] {
