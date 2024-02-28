@@ -30,12 +30,12 @@ type BaseProvider[Resource any] struct {
 	gatewayAddress      string                                // Address of the Cluster Gateway.
 	doConnectToGateway  bool                                  // True if this provider should actually attempt to connect to the gateway. Some providers don't need to.
 
-	subscribers *cmap.ConcurrentMap[string, func([]Resource)]
+	subscribers *cmap.ConcurrentMap[string, func([]Resource) bool]
 }
 
 func newBaseProvider[Resource any](queryInterval time.Duration, errorHandler domain.ErrorHandler, doConnectToGateway bool) *BaseProvider[Resource] {
 	resources := cmap.New[Resource]()
-	subscribers := cmap.New[func([]Resource)]()
+	subscribers := cmap.New[func([]Resource) bool]()
 
 	provider := &BaseProvider[Resource]{
 		doConnectToGateway:  doConnectToGateway,
@@ -72,9 +72,19 @@ func (p *BaseProvider[Resource]) RefreshOccurred() {
 	p.lastRefresh = time.Now()
 	resources := p.Resources()
 
+	unsubscribeThese := make([]string, 0)
+
 	for kv := range p.subscribers.IterBuffered() {
 		handler := kv.Val
-		handler(resources)
+		mounted := handler(resources)
+
+		if !mounted {
+			unsubscribeThese = append(unsubscribeThese, kv.Key)
+		}
+	}
+
+	for _, componentId := range unsubscribeThese {
+		p.UnsubscribeFromRefreshes(componentId)
 	}
 }
 
@@ -126,7 +136,7 @@ func (p *BaseProvider[Resource]) Start(addr string) error {
 }
 
 // Subscribe to Kernel refreshes.
-func (p *BaseProvider[Resource]) SubscribeToRefreshes(id string, handler func([]Resource)) {
+func (p *BaseProvider[Resource]) SubscribeToRefreshes(id string, handler func([]Resource) bool) {
 	p.subscribers.Set(id, handler)
 }
 
@@ -139,8 +149,6 @@ func (p *BaseProvider[Resource]) UnsubscribeFromRefreshes(id string) {
 func (p *BaseProvider[Resource]) DialGatewayGRPC(gatewayAddress string) error {
 	// Return immediately if we're not supposed to connect.
 	if !p.doConnectToGateway {
-		app.Logf("Spoofing RPC connection to Cluster Gateway...")
-		time.Sleep(time.Second * 1)
 		p.connectedToGateway = true
 		p.gatewayAddress = gatewayAddress
 		return nil

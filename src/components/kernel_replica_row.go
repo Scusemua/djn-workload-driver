@@ -12,17 +12,15 @@ import (
 type KernelReplicaRow struct {
 	app.Compo
 
-	workloadDriver domain.WorkloadDriver
-	Replica        *gateway.JupyterKernelReplica
-	errorHandler   domain.ErrorHandler
+	Replica      *gateway.JupyterKernelReplica
+	errorHandler domain.ErrorHandler
 
 	onMigrateButtonClickedHandler MigrateButtonClickedHandler
 }
 
-func NewKernelReplicaRow(replica *gateway.JupyterKernelReplica, onMigrateButtonClickedHandler MigrateButtonClickedHandler, workloadDriver domain.WorkloadDriver, errorHandler domain.ErrorHandler) *KernelReplicaRow {
+func NewKernelReplicaRow(replica *gateway.JupyterKernelReplica, onMigrateButtonClickedHandler MigrateButtonClickedHandler, errorHandler domain.ErrorHandler) *KernelReplicaRow {
 	return &KernelReplicaRow{
 		Replica:                       replica,
-		workloadDriver:                workloadDriver,
 		errorHandler:                  errorHandler,
 		onMigrateButtonClickedHandler: onMigrateButtonClickedHandler,
 	}

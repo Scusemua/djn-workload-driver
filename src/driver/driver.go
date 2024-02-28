@@ -31,11 +31,9 @@ type workloadDriverImpl struct {
 	rpcCallTimeout         time.Duration                // Timeout for individual RPC calls.
 	rpcClient              gateway.ClusterGatewayClient // gRPC client to the Cluster Gateway.
 
-	kernelProvider domain.KernelProvider
-	nodeProvider   domain.NodeProvider
-
-	nodeQueryTicker     *time.Ticker  // Sends ticks to retrieve updates on the nodes.
-	quitNodeQueryTicker chan struct{} // Used to tell the node querier (a goroutine) to stop querying.
+	kernelProvider     domain.KernelProvider
+	nodeProvider       domain.NodeProvider
+	kernelSpecProvider domain.KernelSpecProvider
 }
 
 func NewWorkloadDriver(errorHandler domain.ErrorHandler, opts *config.Configuration) *workloadDriverImpl {
@@ -49,6 +47,11 @@ func NewWorkloadDriver(errorHandler domain.ErrorHandler, opts *config.Configurat
 		panic(err)
 	}
 
+	kernelSpecQueryInterval, err := time.ParseDuration(opts.KernelSpecQueryInterval)
+	if err != nil {
+		panic(err)
+	}
+
 	// kernelMap := cmap.New[*gateway.DistributedJupyterKernel]()
 	// nodeMap := cmap.New[*domain.KubernetesNode]()
 	driver := &workloadDriverImpl{
@@ -57,8 +60,6 @@ func NewWorkloadDriver(errorHandler domain.ErrorHandler, opts *config.Configurat
 		errorHandler:           errorHandler,
 		spoofGatewayConnection: opts.SpoofCluster,
 		nodeQueryInterval:      nodeQueryInterval,
-		nodeQueryTicker:        time.NewTicker(nodeQueryInterval),
-		quitNodeQueryTicker:    make(chan struct{}),
 	}
 
 	if driver.spoofGatewayConnection {
@@ -68,6 +69,7 @@ func NewWorkloadDriver(errorHandler domain.ErrorHandler, opts *config.Configurat
 	}
 
 	driver.nodeProvider = providers.NewNodeProvider(nodeQueryInterval, errorHandler, opts.SpoofCluster)
+	driver.kernelSpecProvider = providers.NewBaseKernelSpecProvider(kernelSpecQueryInterval, errorHandler)
 
 	return driver
 }
@@ -130,10 +132,17 @@ func (d *workloadDriverImpl) RefreshResources() {
 	d.kernelProvider.RefreshResources()
 }
 
+// Return the entity responsible for providing the up-to-date list of Jupyter kernel specs.
+func (d *workloadDriverImpl) KernelSpecProvider() domain.KernelSpecProvider {
+	return d.kernelSpecProvider
+}
+
+// Return the entity responsible for providing the up-to-date list of Jupyter kernels.
 func (d *workloadDriverImpl) KernelProvider() domain.KernelProvider {
 	return d.kernelProvider
 }
 
+// Return the entity responsible for providing the up-to-date list of Kubernetes nodes.
 func (d *workloadDriverImpl) NodeProvider() domain.NodeProvider {
 	return d.nodeProvider
 }
@@ -165,16 +174,6 @@ func (d *workloadDriverImpl) MigrateKernelReplica(arg *gateway.MigrationRequest)
 	app.Logf("Response for MigrateKernelReplica requqest: %v", resp)
 
 	return nil
-}
-
-// Subscribe to Kernel refreshes.
-func (d *workloadDriverImpl) SubscribeToRefreshes(key string, handler func([]*gateway.DistributedJupyterKernel)) {
-	d.kernelProvider.SubscribeToRefreshes(key, handler)
-}
-
-// Unsubscribe from Kernel refreshes.
-func (d *workloadDriverImpl) UnsubscribeFromRefreshes(key string) {
-	d.kernelProvider.UnsubscribeFromRefreshes(key)
 }
 
 func (d *workloadDriverImpl) GatewayAddress() string {

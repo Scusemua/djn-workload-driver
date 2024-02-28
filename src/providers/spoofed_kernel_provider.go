@@ -16,12 +16,12 @@ type SpoofedKernelProvider struct {
 	*BaseKernelProvider
 }
 
-func NewSpoofedKernelProvider(kernelQueryInterval time.Duration, errorHandler domain.ErrorHandler) *SpoofedKernelProvider {
+func NewSpoofedKernelProvider(kernelQueryInterval time.Duration, errorHandler domain.ErrorHandler) domain.KernelProvider {
 	// The BaseProvider will be created in the call to NewKernelProvider.
 	baseKernelProvider := NewKernelProvider(kernelQueryInterval, errorHandler)
 
 	provider := &SpoofedKernelProvider{
-		BaseKernelProvider: baseKernelProvider,
+		BaseKernelProvider: baseKernelProvider.(*BaseKernelProvider),
 	}
 
 	provider.ResourceProvider = provider

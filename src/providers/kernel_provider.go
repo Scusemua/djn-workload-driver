@@ -13,7 +13,7 @@ type BaseKernelProvider struct {
 	*BaseProvider[*gateway.DistributedJupyterKernel]
 }
 
-func NewKernelProvider(kernelQueryInterval time.Duration, errorHandler domain.ErrorHandler) *BaseKernelProvider {
+func NewKernelProvider(kernelQueryInterval time.Duration, errorHandler domain.ErrorHandler) domain.KernelProvider {
 	// Create the base provider that provides implementations to methods common to all types of resource providers.
 	baseProvider := newBaseProvider[*gateway.DistributedJupyterKernel](kernelQueryInterval, errorHandler, true)
 

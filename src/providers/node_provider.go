@@ -49,7 +49,7 @@ func (p *BaseNodeProvider) RefreshResources() {
 
 	ctxConnect, cancelConnect := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancelConnect()
-	c, _, err := websocket.Dial(ctxConnect, "ws://localhost:9995/api/k8s-nodes", nil)
+	c, _, err := websocket.Dial(ctxConnect, "ws://localhost:9995"+domain.KUBERNETES_NODES_ENDPOINT, nil)
 	if err != nil {
 		app.Logf("Failed to connect to backend while trying to refresh k8s nodes: %v", err)
 		p.errorHandler.HandleError(err, "Failed to fetch list of active nodes from the Cluster Gateway. Could not connect to the backend.")
@@ -58,8 +58,7 @@ func (p *BaseNodeProvider) RefreshResources() {
 	defer c.CloseNow()
 
 	msg := map[string]interface{}{
-		"op":          "request-nodes",
-		"spoof-nodes": p.doConnectToGateway,
+		"op": "request-nodes",
 	}
 
 	ctxWrite, cancelWrite := context.WithTimeout(context.Background(), time.Second*30)
@@ -80,7 +79,7 @@ func (p *BaseNodeProvider) RefreshResources() {
 		return
 	}
 
-	app.Logf("Received from the backend: %v", nodes)
+	// app.Logf("Received from the backend: %v", nodes)
 
 	// Clear the current nodes.
 	p.resources.Clear()

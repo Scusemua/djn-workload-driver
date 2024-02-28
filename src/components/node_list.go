@@ -18,23 +18,23 @@ type NodeList struct {
 
 	onNodeSelected func(*domain.KubernetesNode)
 	errorHandler   domain.ErrorHandler
-	workloadDriver domain.WorkloadDriver
+	nodeProvider   domain.NodeProvider
 
 	Nodes       []*domain.KubernetesNode
 	expanded    map[string]bool
 	selectedIdx int
 }
 
-func NewNodeList(workloadDriver domain.WorkloadDriver, errorHandler domain.ErrorHandler, radioButtonsVisible bool, onNodeSelected func(*domain.KubernetesNode)) *NodeList {
+func NewNodeList(nodeProvider domain.NodeProvider, errorHandler domain.ErrorHandler, radioButtonsVisible bool, onNodeSelected func(*domain.KubernetesNode)) *NodeList {
 	nodeList := &NodeList{
 		id:                  fmt.Sprintf("NodeList-%s", uuid.New().String()[0:26]),
 		onNodeSelected:      onNodeSelected,
-		workloadDriver:      workloadDriver,
+		nodeProvider:        nodeProvider,
 		errorHandler:        errorHandler,
 		radioButtonsVisible: radioButtonsVisible,
 	}
 
-	nodes := workloadDriver.NodeProvider().Resources()
+	nodes := nodeProvider.Resources()
 	sort.Slice(nodes, func(i int, j int) bool {
 		return nodes[i].NodeId < nodes[j].NodeId
 	})
@@ -45,15 +45,15 @@ func NewNodeList(workloadDriver domain.WorkloadDriver, errorHandler domain.Error
 }
 
 func (nl *NodeList) OnMount(ctx app.Context) {
-	nl.workloadDriver.NodeProvider().SubscribeToRefreshes(nl.id, nl.handleNodesRefreshed)
+	nl.nodeProvider.SubscribeToRefreshes(nl.id, nl.handleNodesRefreshed)
 
-	go nl.workloadDriver.NodeProvider().RefreshResources()
+	go nl.nodeProvider.RefreshResources()
 }
 
-func (nl *NodeList) handleNodesRefreshed(nodes []*domain.KubernetesNode) {
+func (nl *NodeList) handleNodesRefreshed(nodes []*domain.KubernetesNode) bool {
 	if !nl.Mounted() {
 		app.Logf("NodeList %s (%p) is not mounted; ignoring refresh.", nl.id, nl)
-		return
+		return false
 	}
 
 	app.Logf("NodeList %s (%p) is handling a nodes refresh. Number of nodes: %d.", nl.id, nl, len(nodes))
@@ -78,6 +78,7 @@ func (nl *NodeList) handleNodesRefreshed(nodes []*domain.KubernetesNode) {
 	nl.Nodes = nodes
 
 	nl.Update()
+	return true
 }
 
 func (nl *NodeList) getMaxHeight(node_id string) string {
@@ -101,7 +102,7 @@ func (nl *NodeList) Render() app.UI {
 				),
 			),
 			app.Div().Class("pf-v5-c-card__expandable-content").Body(
-				app.Div().Class("pf-v5-c-data-list pf-m-grid-md").
+				app.Div().Class("pf-v5-c-data-list pf-m-compact pf-m-grid-md").
 					Aria("label", "Node list").
 					ID(keyListID).
 					Body(

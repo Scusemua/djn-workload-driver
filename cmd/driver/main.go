@@ -9,6 +9,7 @@ import (
 	"github.com/maxence-charriere/go-app/v9/pkg/app"
 	"github.com/scusemua/djn-workload-driver/m/v2/src/components"
 	"github.com/scusemua/djn-workload-driver/m/v2/src/config"
+	"github.com/scusemua/djn-workload-driver/m/v2/src/domain"
 	"github.com/scusemua/djn-workload-driver/m/v2/src/server"
 )
 
@@ -58,11 +59,14 @@ func main() {
 		},
 	})
 
-	// Used to transfer data from the frontend to the backend.
-	http.Handle("/api/k8s-nodes", server.NewKubeNodeHttpHandler(conf))
+	// Used internally (by the frontend) to get the current kubernetes nodes from the backend  (i.e., the backend).
+	http.Handle(domain.KUBERNETES_NODES_ENDPOINT, server.NewKubeNodeHttpHandler(conf))
 
-	// Used to return the config to the client.
-	http.Handle("/api/config", server.NewConfigHttpHandler(conf))
+	// Used internally (by the frontend) to get the system config from the backend  (i.e., the backend).
+	http.Handle(domain.SYSTEM_CONFIG_ENDPOINT, server.NewConfigHttpHandler(conf))
+
+	// Used internally (by the frontend) to get the current set of Jupyter kernel specs from us (i.e., the backend).
+	http.Handle(domain.KERNEL_SPEC_ENDPOINT, server.NewKernelSpecHttpHandler(conf))
 
 	fmt.Printf("WorkloadDriver HTTP server is starting now.")
 

@@ -10,6 +10,17 @@ import (
 	"nhooyr.io/websocket"
 )
 
+const (
+	// Used internally (by the frontend) to get the current kubernetes nodes from the backend.
+	KUBERNETES_NODES_ENDPOINT = "/api/node"
+
+	// Used internally (by the frontend) to get the system config from the backend.
+	SYSTEM_CONFIG_ENDPOINT = "/api/config"
+
+	// Used internally (by the frontend) to get the current set of Jupyter kernel specs from the backend.
+	KERNEL_SPEC_ENDPOINT = "/api/kernelspec"
+)
+
 var (
 	KernelStatuses      = []string{"unknown", "starting", "idle", "busy", "terminating", "restarting", "autorestarting", "dead"}
 	ErrEmptyGatewayAddr = errors.New("cluster gateway IP address cannot be the empty string")
@@ -26,8 +37,9 @@ type WorkloadDriver interface {
 	// Return true if we're connected to the Cluster Gateway.
 	ConnectedToGateway() bool
 
-	KernelProvider() KernelProvider
-	NodeProvider() NodeProvider
+	KernelSpecProvider() KernelSpecProvider // Return the entity responsible for providing the up-to-date list of Jupyter kernel specs.
+	KernelProvider() KernelProvider         // Return the entity responsible for providing the up-to-date list of Jupyter kernels.
+	NodeProvider() NodeProvider             // Return the entity responsible for providing the up-to-date list of Kubernetes nodes.
 
 	// Tell the Cluster Gateway to migrate a particular replica.
 	MigrateKernelReplica(*gateway.MigrationRequest) error
@@ -47,11 +59,11 @@ type ResourceProvider[resource any] interface {
 	RefreshResources()     // Manually/explicitly refresh the set of active resources from the Cluster Gateway.
 	Start(string) error    // Start querying for resources periodically.
 
-	RefreshOccurred()                              // Called automatically when a refresh occurred; informs the subscribers.
-	QueryResources()                               // Call in its own goroutine; polls for resources.
-	SubscribeToRefreshes(string, func([]resource)) // Subscribe to Kernel refreshes.
-	UnsubscribeFromRefreshes(string)               // Unsubscribe from Kernel refreshes.
-	DialGatewayGRPC(string) error                  // Attempt to connect to the Cluster Gateway's gRPC server using the provided address. Returns an error if connection failed, or nil on success. This should NOT be called from the UI goroutine.
+	RefreshOccurred()                                   // Called automatically when a refresh occurred; informs the subscribers.
+	QueryResources()                                    // Call in its own goroutine; polls for resources.
+	SubscribeToRefreshes(string, func([]resource) bool) // Subscribe to Kernel refreshes.
+	UnsubscribeFromRefreshes(string)                    // Unsubscribe from Kernel refreshes.
+	DialGatewayGRPC(string) error                       // Attempt to connect to the Cluster Gateway's gRPC server using the provided address. Returns an error if connection failed, or nil on success. This should NOT be called from the UI goroutine.
 }
 
 type KernelProvider interface {
@@ -135,12 +147,12 @@ type BackendHttpHandler interface {
 }
 
 type KernelSpec struct {
-	Name              string `json:"name"`
-	DisplayName       string `json:"display_name"`
-	Language          string `json:"language"`
-	InterruptMode     string `json:"interrupt_mode"`
-	KernelProvisioner *KernelProvisioner
-	ArgV              string `json:"argv"`
+	Name              string             `json:"name"`
+	DisplayName       string             `json:"display_name"`
+	Language          string             `json:"language"`
+	InterruptMode     string             `json:"interrupt_mode"`
+	KernelProvisioner *KernelProvisioner `json:"kernel_provisioner"`
+	ArgV              []string           `json:"argv"`
 }
 
 func (ks *KernelSpec) String() string {

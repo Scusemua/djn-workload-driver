@@ -20,7 +20,7 @@ type KernelList struct {
 	Kernels map[string]*gateway.DistributedJupyterKernel
 
 	id             string
-	workloadDriver domain.WorkloadDriver
+	kernelProvider domain.KernelProvider
 	errorHandler   domain.ErrorHandler
 	expanded       map[string]bool
 	selected       map[string]bool
@@ -28,16 +28,16 @@ type KernelList struct {
 	onMigrateButtonClicked MigrateButtonClickedHandler
 }
 
-func NewKernelList(workloadDriver domain.WorkloadDriver, errorHandler domain.ErrorHandler, onMigrateButtonClicked MigrateButtonClickedHandler) *KernelList {
+func NewKernelList(kernelProvider domain.KernelProvider, errorHandler domain.ErrorHandler, onMigrateButtonClicked MigrateButtonClickedHandler) *KernelList {
 	kl := &KernelList{
 		id:                     fmt.Sprintf("KernelList-%s", uuid.New().String()[0:26]),
-		workloadDriver:         workloadDriver,
+		kernelProvider:         kernelProvider,
 		errorHandler:           errorHandler,
 		onMigrateButtonClicked: onMigrateButtonClicked,
 		selected:               make(map[string]bool),
 	}
 
-	kl.recreateState(workloadDriver.KernelProvider().Resources())
+	kl.recreateState(kernelProvider.Resources())
 
 	return kl
 }
@@ -77,25 +77,27 @@ func (kl *KernelList) recreateState(kernels []*gateway.DistributedJupyterKernel)
 	kl.Kernels = refreshedKernels
 }
 
-func (kl *KernelList) handleKernelsRefresh(kernels []*gateway.DistributedJupyterKernel) {
+func (kl *KernelList) handleKernelsRefresh(kernels []*gateway.DistributedJupyterKernel) bool {
 	if !kl.Mounted() {
 		app.Logf("KernelList %s (%p) is not mounted; ignoring refresh.", kl.id, kl)
-		return
+		return false
 	}
 
 	app.Logf("KernelList %s (%p) is handling a kernel refresh. Number of kernels: %d.", kl.id, kl, len(kernels))
 	kl.recreateState(kernels)
 	kl.Update()
+
+	return true
 }
 
 func (kl *KernelList) OnMount(ctx app.Context) {
-	kl.workloadDriver.KernelProvider().SubscribeToRefreshes(kl.id, kl.handleKernelsRefresh)
+	kl.kernelProvider.SubscribeToRefreshes(kl.id, kl.handleKernelsRefresh)
 
-	go kl.workloadDriver.KernelProvider().RefreshResources()
+	go kl.kernelProvider.RefreshResources()
 }
 
 func (kl *KernelList) OnDismount(ctx app.Context) {
-	kl.workloadDriver.KernelProvider().UnsubscribeFromRefreshes(kl.id)
+	kl.kernelProvider.UnsubscribeFromRefreshes(kl.id)
 }
 
 func (kl *KernelList) Render() app.UI {
@@ -113,7 +115,7 @@ func (kl *KernelList) Render() app.UI {
 				),
 			),
 			app.Div().Class("pf-v5-c-card__body").Body(
-				app.Div().Class("pf-v5-c-data-list pf-m-grid-md").
+				app.Div().Class("pf-v5-c-data-list pf-m-compact pf-m-grid-md").
 					Aria("label", "Kernel list").
 					ID(keyListID).
 					Body(
@@ -172,7 +174,6 @@ func (kl *KernelList) Render() app.UI {
 														Body(
 															app.Div().
 																Class("pf-v5-l-flex pf-m-column pf-m-space-items-none").
-																Style("padding", "8px 0px 0px 0px").
 																Body(
 																	app.Div().
 																		Class("pf-v5-l-flex pf-m-column").
@@ -223,7 +224,7 @@ func (kl *KernelList) Render() app.UI {
 												),
 												app.TBody().Role("rowgroup").Body(
 													app.Range(kernels[kernel_id].GetReplicas()).Slice(func(j int) app.UI {
-														return NewKernelReplicaRow(kernels[kernel_id].GetReplicas()[j], kl.onMigrateButtonClicked, kl.workloadDriver, kl.errorHandler)
+														return NewKernelReplicaRow(kernels[kernel_id].GetReplicas()[j], kl.onMigrateButtonClicked, kl.errorHandler)
 													},
 													),
 												),

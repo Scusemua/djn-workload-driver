@@ -56,7 +56,7 @@ func NewMainWindow(gatewayAddress string) *MainWindow {
 func (w *MainWindow) getConfigFromBackend(ctx app.Context) {
 	ctxConnect, cancelConnect := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancelConnect()
-	c, _, err := websocket.Dial(ctxConnect, "ws://localhost:9995/api/config", nil)
+	c, _, err := websocket.Dial(ctxConnect, "ws://localhost:9995"+domain.SYSTEM_CONFIG_ENDPOINT, nil)
 	if err != nil {
 		app.Logf("Failed to connect to backend while trying to get config: %v", err)
 		w.HandleError(err, "Failed to fetch config from backend. Could not connect to the backend.")
@@ -495,10 +495,19 @@ func (w *MainWindow) getPhaseThreeUI() app.UI {
 					)),
 		app.Div().Class("pf-v5-l-grid pf-m-gutter").Body(
 			app.Div().Class("pf-v5-l-grid__item pf-m-gutter pf-m-6-col").Body(
-				NewKernelList(w.WorkloadDriver, w, w.onMigrateButtonClicked),
+				app.Div().Class("pf-v5-l-flex pf-m-column pf-m-row-on-md pf-m-column-on-lg").Body(
+					app.Div().Class("pf-v5-l-grid__item pf-m-gutter pf-m-6-col").Body(
+						NewKernelList(w.WorkloadDriver.KernelProvider(), w, w.onMigrateButtonClicked),
+					),
+					app.Div().Class("pf-v5-l-grid__item pf-m-gutter pf-m-6-col").Body(
+						NewKernelSpecCard(w.WorkloadDriver.KernelSpecProvider()),
+					),
+				),
 			),
 			app.Div().Class("pf-v5-l-grid__item pf-m-gutter pf-m-6-col").Body(
-				NewNodeList(w.WorkloadDriver, w, false, func(kn *domain.KubernetesNode) { /* Do nothing */ }),
+				app.Div().Class("pf-v5-l-grid__item pf-m-gutter").Body(
+					NewNodeList(w.WorkloadDriver.NodeProvider(), w, false, func(kn *domain.KubernetesNode) { /* Do nothing */ }),
+				),
 			),
 		))
 }
