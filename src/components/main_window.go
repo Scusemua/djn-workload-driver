@@ -66,7 +66,7 @@ func NewMainWindow(gatewayAddress string) *MainWindow {
 func (w *MainWindow) getConfigFromBackend(ctx app.Context) {
 	ctxConnect, cancelConnect := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancelConnect()
-	c, _, err := websocket.Dial(ctxConnect, "ws://localhost:9995"+domain.SYSTEM_CONFIG_ENDPOINT, nil)
+	c, _, err := websocket.Dial(ctxConnect, "ws://localhost:8000"+domain.SYSTEM_CONFIG_ENDPOINT, nil)
 	if err != nil {
 		app.Logf("Failed to connect to backend while trying to get config: %v", err)
 		w.HandleError(err, "Failed to fetch config from backend. Could not connect to the backend.")

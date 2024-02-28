@@ -35,7 +35,7 @@ func (p *BaseKernelSpecProvider) RefreshResources() {
 
 	ctxConnect, cancelConnect := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancelConnect()
-	c, _, err := websocket.Dial(ctxConnect, "ws://localhost:9995"+domain.KERNEL_SPEC_ENDPOINT, nil)
+	c, _, err := websocket.Dial(ctxConnect, "ws://localhost:8000"+domain.KERNEL_SPEC_ENDPOINT, nil)
 	if err != nil {
 		app.Logf("Failed to connect to backend while trying to refresh k8s kernel specs: %v", err)
 		p.errorHandler.HandleError(err, "Failed to fetch list of active kernel specs from the Cluster Gateway. Could not connect to the backend.")
