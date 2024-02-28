@@ -17,20 +17,16 @@ type SpoofedKernelProvider struct {
 }
 
 func NewSpoofedKernelProvider(kernelQueryInterval time.Duration, errorHandler domain.ErrorHandler) *SpoofedKernelProvider {
-	provider := &SpoofedKernelProvider{NewKernelProvider(kernelQueryInterval, errorHandler)}
+	// The BaseProvider will be created in the call to NewKernelProvider.
+	baseKernelProvider := NewKernelProvider(kernelQueryInterval, errorHandler)
 
-	provider.KernelProvider = provider
+	provider := &SpoofedKernelProvider{
+		BaseKernelProvider: baseKernelProvider,
+	}
+
+	provider.ResourceProvider = provider
 
 	return provider
-}
-
-func (p *SpoofedKernelProvider) DialGatewayGRPC(gatewayAddress string) error {
-	app.Logf("Spoofing RPC connection to Cluster Gateway...")
-	time.Sleep(time.Second * 1)
-	p.connectedToGateway = true
-	p.gatewayAddress = gatewayAddress
-
-	return nil
 }
 
 // Create an individual spoofed/fake kernel.
@@ -68,7 +64,7 @@ func (p *SpoofedKernelProvider) spoofInitialKernels() {
 
 	for i := 0; i < numKernels; i++ {
 		kernel := p.spoofKernel()
-		p.kernels.Set(kernel.GetKernelId(), kernel)
+		p.resources.Set(kernel.GetKernelId(), kernel)
 	}
 
 	app.Logf("Created an initial batch of %d spoofed kernels.", numKernels)
@@ -77,20 +73,20 @@ func (p *SpoofedKernelProvider) spoofInitialKernels() {
 // Top-level function for spoofing kernels.
 func (p *SpoofedKernelProvider) spoofKernels() {
 	// If we've already generated some kernels, then we'll randomly remove a few and add a few.
-	if p.kernels.Count() > 0 {
+	if p.resources.Count() > 0 {
 		app.Log("Spoofing kernels.")
 
 		var maxAdd int
 
-		if p.kernels.Count() <= 2 {
+		if p.resources.Count() <= 2 {
 			// If ther's 2 kernels or less, then add up to 5.
 			maxAdd = 5
 		} else {
-			maxAdd = int(math.Ceil((0.25 * float64(p.kernels.Count())))) // Add and remove up to 25% of the existing number of the spoofed kernels.
+			maxAdd = int(math.Ceil((0.25 * float64(p.resources.Count())))) // Add and remove up to 25% of the existing number of the spoofed kernels.
 		}
 
-		maxDelete := int(math.Ceil((0.50 * float64(p.kernels.Count())))) // Add and remove up to 50% of the existing number of the spoofed kernels.
-		numToDelete := rand.Intn(int(math.Max(2, float64(maxDelete+1)))) // Delete UP TO this many.
+		maxDelete := int(math.Ceil((0.50 * float64(p.resources.Count())))) // Add and remove up to 50% of the existing number of the spoofed kernels.
+		numToDelete := rand.Intn(int(math.Max(2, float64(maxDelete+1))))   // Delete UP TO this many.
 		numToAdd := rand.Intn(int(math.Max(2, float64(maxAdd+1))))
 
 		app.Logf("Adding %d new kernel(s) and removing up to %d existing kernel(s).", numToAdd, numToDelete)
@@ -109,8 +105,8 @@ func (p *SpoofedKernelProvider) spoofKernels() {
 			// Delete the victims.
 			for _, id := range toDelete {
 				// Make sure we didn't already delete this one.
-				if _, ok := p.kernels.Get(id); ok {
-					p.kernels.Remove(id)
+				if _, ok := p.resources.Get(id); ok {
+					p.resources.Remove(id)
 					numDeleted++
 				}
 			}
@@ -120,10 +116,10 @@ func (p *SpoofedKernelProvider) spoofKernels() {
 
 		for i := 0; i < numToAdd; i++ {
 			kernel := p.spoofKernel()
-			p.kernels.Set(kernel.GetKernelId(), kernel)
+			p.resources.Set(kernel.GetKernelId(), kernel)
 		}
 
-		app.Logf("There are now %d kernel(s).", p.kernels.Count())
+		app.Logf("There are now %d kernel(s).", p.resources.Count())
 	} else {
 		app.Log("Spoofing kernels for the first time.")
 		p.spoofInitialKernels()
@@ -135,13 +131,13 @@ func (p *SpoofedKernelProvider) spoofKernels() {
 // This MUST be called with the p.refreshKernelMutex held.
 // It is the caller's responsibility to release the lock afterwards.
 func (p *SpoofedKernelProvider) RefreshResources() {
-	locked := p.refreshKernelMutex.TryLock()
+	locked := p.refreshMutex.TryLock()
 	if !locked {
 		// If we did not acquire the lock, then there's already an active refresh occurring. We'll just return.
 		app.Log("There is already an active spoofed refresh operation being performed. Please wait for it to complete.")
 		return
 	}
-	defer p.refreshKernelMutex.Unlock()
+	defer p.refreshMutex.Unlock()
 
 	app.Log("Refreshing kernels.")
 
@@ -154,5 +150,5 @@ func (p *SpoofedKernelProvider) RefreshResources() {
 
 	time.Sleep(time.Millisecond * time.Duration(delay_ms))
 
-	p.refreshOccurred()
+	p.RefreshOccurred()
 }

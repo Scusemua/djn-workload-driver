@@ -47,6 +47,8 @@ type ResourceProvider[resource any] interface {
 	RefreshResources()     // Manually/explicitly refresh the set of active resources from the Cluster Gateway.
 	Start(string) error    // Start querying for resources periodically.
 
+	RefreshOccurred()                              // Called automatically when a refresh occurred; informs the subscribers.
+	QueryResources()                               // Call in its own goroutine; polls for resources.
 	SubscribeToRefreshes(string, func([]resource)) // Subscribe to Kernel refreshes.
 	UnsubscribeFromRefreshes(string)               // Unsubscribe from Kernel refreshes.
 	DialGatewayGRPC(string) error                  // Attempt to connect to the Cluster Gateway's gRPC server using the provided address. Returns an error if connection failed, or nil on success. This should NOT be called from the UI goroutine.
@@ -54,6 +56,10 @@ type ResourceProvider[resource any] interface {
 
 type KernelProvider interface {
 	ResourceProvider[*gateway.DistributedJupyterKernel]
+}
+
+type KernelSpecProvider interface {
+	ResourceProvider[*KernelSpec]
 }
 
 type NodeProvider interface {
@@ -126,4 +132,36 @@ type BackendHttpHandler interface {
 
 	// Handle a message/request from the front-end.
 	HandleRequest(*websocket.Conn, *http.Request, map[string]interface{})
+}
+
+type KernelSpec struct {
+	Name              string `json:"name"`
+	DisplayName       string `json:"display_name"`
+	Language          string `json:"language"`
+	InterruptMode     string `json:"interrupt_mode"`
+	KernelProvisioner *KernelProvisioner
+	ArgV              string `json:"argv"`
+}
+
+func (ks *KernelSpec) String() string {
+	out, err := json.Marshal(ks)
+	if err != nil {
+		panic(err)
+	}
+
+	return string(out)
+}
+
+type KernelProvisioner struct {
+	Name    string `json:"name"`
+	Gateway string `json:"display_name"`
+}
+
+func (kp *KernelProvisioner) String() string {
+	out, err := json.Marshal(kp)
+	if err != nil {
+		panic(err)
+	}
+
+	return string(out)
 }
